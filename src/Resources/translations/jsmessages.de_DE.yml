@@ -1,0 +1,65 @@
+supertext_translation:
+    action: Mit Supertext übersetzen
+    menu:
+        settings: Supertext
+    loading: Wird geladen…
+    no_account: Noch kein Supertext-Konto?
+    create_account: Erstellen Sie eines auf supertext.com
+    generate_key: Ihren API-Schlüssel erzeugen Sie unter
+    key_page: supertext.com → Integrations → API
+    admin_role: (erfordert die Rolle Admin).
+    not_configured: Es ist kein Supertext-API-Schlüssel eingerichtet. Eine Administratorin oder ein Administrator kann ihn unter System → Supertext eingeben.
+    unsaved:
+        title: Ungespeicherte Änderungen
+        message: Nach dem Übersetzen wird das Formular neu geladen, ungespeicherte Änderungen gehen dabei verloren. Ohne Speichern fortfahren?
+    error:
+        network: Die Anfrage konnte nicht gesendet werden. Prüfen Sie die Verbindung und versuchen Sie es erneut.
+        http: Die Anfrage ist fehlgeschlagen (HTTP {{ status }}).
+    modal:
+        title: Mit Supertext übersetzen
+        from: Übersetzen aus
+        to: Übersetzen in
+        nothing: In {{ language }} gibt es keinen Text zum Übersetzen.
+        variant: "Die Texte dieser Variante stammen aus ihrem Produktmodell: Übersetzen Sie stattdessen das Produktmodell."
+        not_in_channel: Von den Kanälen dieser Werte nicht verwendet
+        existing: Hat eigenen Text ({{ count }} Werte)
+        to_translate: "{{ count }} Werte zu übersetzen"
+        overwrite: Bestehende Übersetzungen überschreiben
+        overwrite_warning: "Der bestehende Text wird ersetzt in: {{ languages }}. Im Verlauf bleibt der bisherige Text sichtbar."
+        translate: Übersetzen
+        translating: Wird übersetzt…
+        done: Fertig
+    result:
+        translated: übersetzt ({{ count }} Werte)
+        kept: beibehalten, hat bereits eigenen Text
+        nothing: nichts zu übersetzen
+    settings:
+        title: Supertext
+        connection: Verbindung
+        api_key: API-Schlüssel
+        key_saved: Ein Schlüssel ist gespeichert ({{ hint }}). Geben Sie einen neuen ein, um ihn zu ersetzen.
+        key_from_environment: Über die Umgebungsvariable SUPERTEXT_API_KEY gesetzt
+        key_help: Sie können ihn mit oder ohne das Präfix «Supertext-Auth-Key» einfügen.
+        key_environment_help: Auf diesem Server ist die Umgebungsvariable SUPERTEXT_API_KEY gesetzt, sie hat Vorrang.
+        environment: Supertext-API
+        environments:
+            live: Live (api.supertext.com)
+            staging: Staging
+            testing: Testing
+            custom: Eigene Adresse
+        api_url: API-Adresse
+        url_from_environment: Über die Umgebungsvariable SUPERTEXT_API_URL gesetzt ({{ url }}).
+        timeout: Zeitlimit (Sekunden)
+        timeout_help: Wie lange auf eine Sprache gewartet wird (30 bis 1800).
+        languages: Sprachen
+        languages_help: Jedes Gebietsschema geht mit seinem Sprachcode an Supertext (aus en_US wird en-US). Überschreiben Sie den Code oder wählen Sie die Anrede, wo nötig.
+        locale: Gebietsschema
+        code: Supertext-Sprachcode
+        politeness: Anrede
+        politeness_default: Standard
+        politeness_more: Formell (Sie)
+        politeness_less: Informell (du)
+        test: Verbindung testen
+        saved: Einstellungen gespeichert.
+        version: "Supertext Translation für Akeneo PIM, Version"
+        version_unknown: unbekannt

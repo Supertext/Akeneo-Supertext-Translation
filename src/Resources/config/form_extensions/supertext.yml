@@ -1,0 +1,30 @@
+extensions:
+    # "…" menu of the product edit form
+    pim-product-edit-form-supertext-translate:
+        module: supertext-translation/translate-action
+        parent: pim-product-edit-form-secondary-actions
+        targetZone: secondary-actions
+        aclResourceId: pim_enrich_product_edit_attributes
+        position: 70
+        config:
+            type: product
+
+    # "…" menu of the product model edit form
+    pim-product-model-edit-form-supertext-translate:
+        module: supertext-translation/translate-action
+        parent: pim-product-model-edit-form-secondary-actions
+        targetZone: secondary-actions
+        aclResourceId: pim_enrich_product_model_edit_attributes
+        position: 70
+        config:
+            type: product_model
+
+    # System → Supertext
+    pim-menu-system-supertext:
+        module: pim/menu/item
+        parent: pim-menu-system-navigation-block
+        aclResourceId: oro_config_system
+        position: 105
+        config:
+            title: supertext_translation.menu.settings
+            to: supertext_translation_settings_index

@@ -1,0 +1,35 @@
+{
+  "name": "supertext/akeneo-demo",
+  "description": "Akeneo PIM Community Edition with Supertext Translation: the public demo (Railway).",
+  "license": "OSL-3.0",
+  "type": "project",
+  "autoload": {
+    "psr-0": {
+      "": "src/"
+    },
+    "psr-4": {
+      "Pim\\Upgrade\\": "upgrades/",
+      "Supertext\\AkeneoDemo\\": "supertext-demo/"
+    },
+    "exclude-from-classmap": [
+      "vendor/akeneo/pim-community-dev/src/Kernel.php"
+    ]
+  },
+  "require": {
+    "akeneo/pim-community-dev": "v2026.4"
+  },
+  "minimum-stability": "stable",
+  "config": {
+    "allow-plugins": {
+      "symfony/flex": true
+    },
+    "audit": {
+      "block-insecure": false
+    }
+  },
+  "extra": {
+    "symfony": {
+      "require": "5.4.*"
+    }
+  }
+}

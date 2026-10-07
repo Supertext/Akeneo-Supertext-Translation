@@ -1,0 +1,50 @@
+services:
+    Supertext\AkeneoTranslationBundle\Settings\SettingsRepository:
+        arguments: ['@database_connection']
+
+    Supertext\AkeneoTranslationBundle\Settings\Settings:
+        arguments: ['@Supertext\AkeneoTranslationBundle\Settings\SettingsRepository']
+
+    Supertext\AkeneoTranslationBundle\Translation\EntityTranslator:
+        arguments:
+            - '@pim_catalog.repository.attribute'
+            - '@pim_catalog.repository.channel'
+            - '@pim_catalog.updater.product'
+            - '@pim_catalog.updater.product_model'
+            - '@pim_catalog.validator.product'
+            - '@pim_catalog.saver.product'
+            - '@pim_catalog.saver.product_model'
+            - '@Supertext\AkeneoTranslationBundle\Settings\Settings'
+            - '@logger'
+
+    supertext_translation.controller.translate:
+        class: Supertext\AkeneoTranslationBundle\Controller\TranslateController
+        public: true
+        arguments:
+            - '@pim_catalog.repository.product'
+            - '@pim_catalog.repository.product_model'
+            - '@Supertext\AkeneoTranslationBundle\Translation\EntityTranslator'
+            - '@Supertext\AkeneoTranslationBundle\Settings\Settings'
+            - '@oro_security.security_facade'
+            - '@pim_user.context.user'
+            - '@logger'
+
+    supertext_translation.controller.settings:
+        class: Supertext\AkeneoTranslationBundle\Controller\SettingsController
+        public: true
+        arguments:
+            - '@Supertext\AkeneoTranslationBundle\Settings\Settings'
+            - '@Supertext\AkeneoTranslationBundle\Translation\EntityTranslator'
+            - '@oro_security.security_facade'
+            - '@pim_user.context.user'
+
+    Supertext\AkeneoTranslationBundle\Command\TranslateCommand:
+        arguments:
+            - '@pim_catalog.repository.product'
+            - '@pim_catalog.repository.product_model'
+            - '@Supertext\AkeneoTranslationBundle\Translation\EntityTranslator'
+        tags: [{ name: console.command, command: 'supertext:translate' }]
+
+    Supertext\AkeneoTranslationBundle\Command\CheckCommand:
+        arguments: ['@Supertext\AkeneoTranslationBundle\Settings\Settings']
+        tags: [{ name: console.command, command: 'supertext:check' }]

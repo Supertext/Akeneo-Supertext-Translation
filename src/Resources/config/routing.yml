@@ -1,0 +1,40 @@
+# Import from the Akeneo project, e.g. config/routes/supertext_translation.yml:
+#   supertext_translation:
+#       resource: '@SupertextTranslationBundle/Resources/config/routing.yml'
+
+# Page (rendered by the front end; see requirejs.yml → pim/controller-registry)
+supertext_translation_settings_index:
+    path: /supertext/settings
+    options: { expose: true }
+
+supertext_translation_rest_settings_get:
+    path: /supertext/rest/settings
+    defaults: { _controller: 'supertext_translation.controller.settings::getAction', _format: json }
+    methods: [GET]
+    options: { expose: true }
+
+supertext_translation_rest_settings_save:
+    path: /supertext/rest/settings
+    defaults: { _controller: 'supertext_translation.controller.settings::saveAction', _format: json }
+    methods: [POST]
+    options: { expose: true }
+
+supertext_translation_rest_settings_test:
+    path: /supertext/rest/settings/test
+    defaults: { _controller: 'supertext_translation.controller.settings::testAction', _format: json }
+    methods: [POST]
+    options: { expose: true }
+
+supertext_translation_rest_context:
+    path: /supertext/rest/{type}/{id}
+    defaults: { _controller: 'supertext_translation.controller.translate::contextAction', _format: json }
+    requirements: { type: 'product|product_model', id: '[0-9a-fA-F-]+' }
+    methods: [GET]
+    options: { expose: true }
+
+supertext_translation_rest_translate:
+    path: /supertext/rest/{type}/{id}/translate
+    defaults: { _controller: 'supertext_translation.controller.translate::translateAction', _format: json }
+    requirements: { type: 'product|product_model', id: '[0-9a-fA-F-]+' }
+    methods: [POST]
+    options: { expose: true }

@@ -1,0 +1,2 @@
+supertext_translation:
+    resource: '@SupertextTranslationBundle/Resources/config/routing.yml'

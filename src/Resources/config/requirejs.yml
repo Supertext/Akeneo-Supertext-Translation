@@ -1,0 +1,12 @@
+config:
+    config:
+        pim/controller-registry:
+            controllers:
+                supertext_translation_settings_index:
+                    module: supertext-translation/settings-controller
+                    aclResourceId: oro_config_system
+
+    paths:
+        # Relative to public/bundles/ (bin/console pim:installer:assets copies Resources/public there).
+        supertext-translation/settings-controller: supertexttranslation/js/settings/settings-controller.tsx
+        supertext-translation/translate-action: supertexttranslation/js/product/translate-action.tsx

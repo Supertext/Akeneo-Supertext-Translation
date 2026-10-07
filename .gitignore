@@ -1,0 +1,10 @@
+/vendor/
+/composer.lock
+/demo/project/vendor/
+/demo/project/var/
+/demo/project/node_modules/
+/demo/project/public/
+/tests/docs/node_modules/
+/.phpunit.cache
+/.phpunit.result.cache
+.env
