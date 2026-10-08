@@ -31,7 +31,7 @@ Where the CMS doesn't show the plugin's version itself, the plugin's own setting
 
 Every plugin repo's `README.md` ends with the same list of all Supertext plugins, between the `<!-- supertext-plugins:start -->` and `<!-- supertext-plugins:end -->` markers (just before *License* if there is one). It has two tables, **Content management systems (CMS)** and **Product information management (PIM)**, sorted alphabetically. Each row has the system, the link, one sentence on the **type of integration** (plugin, extension, module, bundle, package, connector service, …, and how it's installed or hooked in) and what it does. Plugins still being built are listed with *In development*; replace that with the real description when the plugin works.
 
-When a plugin is added, renamed or its description changes, update the list here **and** in every repo: all `*-Supertext-Translation` repos, `supertext-wordpress-polylang` and `supertext-aem-connector`. A new plugin adds its own row and gets the list in its README from the start (as of October 2026 the Magnolia and Pimcore repos don't have it yet: add it when their README is written). Drupal's module lives on drupal.org (maintained by MD Systems), so it is listed but doesn't carry the list. The Akeneo repo is named `Akeneo-Supertext-Translation-` (trailing dash; Remy is renaming it to `Akeneo-Supertext-Translation`); fix the link once it is renamed.
+When a plugin is added, renamed or its description changes, update the list here **and** in every repo: all `*-Supertext-Translation` repos, `supertext-wordpress-polylang` and `supertext-aem-connector`. A new plugin adds its own row and gets the list in its README from the start (as of October 2026 the Magnolia and Pimcore repos don't have it yet: add it when their README is written). Drupal's module lives on drupal.org (maintained by MD Systems), so it is listed but doesn't carry the list.
 
 Current block (copy exactly, between the markers):
 
@@ -68,7 +68,7 @@ Supertext offers AI and professional translation plugins for these systems:
 
 | System | Plugin | Type of integration | What it does |
 | --- | --- | --- | --- |
-| Akeneo PIM | [Akeneo-Supertext-Translation](https://github.com/Supertext/Akeneo-Supertext-Translation-) | Symfony bundle (Composer) for the Community Edition, with an action on the product edit form and a System page. | *Translate with Supertext* for products and product models, into your other locales |
+| Akeneo PIM | [Akeneo-Supertext-Translation](https://github.com/Supertext/Akeneo-Supertext-Translation) | Symfony bundle (Composer) for the Community Edition, with an action on the product edit form and a System page. | *Translate with Supertext* for products and product models, into your other locales |
 | AtroPIM | [AtroPIM-Supertext-Translation](https://github.com/Supertext/AtroPIM-Supertext-Translation) | AtroCore module (Composer) that adds an action type and a Supertext connection type. | *Translate with Supertext* button and mass action for products and other records, into your other languages |
 | Pimcore | [Pimcore-Supertext-Translation](https://github.com/Supertext/Pimcore-Supertext-Translation) | Pimcore bundle (Composer) with a Pimcore Studio panel. | *In development:* translates documents and data objects into the other languages |
 ```
