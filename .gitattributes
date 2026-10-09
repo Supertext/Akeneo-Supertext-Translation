@@ -3,3 +3,5 @@
 /.github export-ignore
 /phpunit.xml.dist export-ignore
 /CLAUDE.md export-ignore
+/phpstan.neon export-ignore
+/phpstan-baseline.neon export-ignore

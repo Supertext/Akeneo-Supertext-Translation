@@ -101,10 +101,16 @@ Every Supertext plugin repo has, and a new one gets from the start:
 - `LICENSE` matching the license its manifest declares (`composer.json`, `package.json`, `pyproject.toml`, `.csproj`, plugin header).
 - `SECURITY.md`: report vulnerabilities privately through GitHub's private vulnerability reporting or support@supertext.com, never in public issues.
 - `.github/dependabot.yml`: weekly updates for its package ecosystem and GitHub Actions, minor and patch updates grouped into one pull request.
-- On GitHub: the About box filled in (one-sentence description, website https://www.supertext.com, topics), `main` protected against force-pushes and deletion, Wiki and Projects off, Dependabot alerts and private vulnerability reporting on, and the Supertext social preview image.
+- `.github/workflows/checks.yml` (actionlint + zizmor on every push and PR, dependency review on PRs) and `.github/workflows/links.yml` (lychee weekly and on docs changes; broken links open the issue "Broken links in the docs"). Third-party actions are pinned to commit SHAs.
+- PHP repos: PHPStan in CI (`phpstan.neon`, baseline in `phpstan-baseline.neon`).
+- On GitHub: the About box filled in (one-sentence description, website https://www.supertext.com, topics), `main` protected against force-pushes and deletion, Wiki and Projects off, Dependabot alerts and private vulnerability reporting on, secret scanning with push protection and CodeQL default setup on, and the Supertext social preview image.
 - A row in the plugin list (see *Plugin list*) and in the org profile (`Supertext/.github` → `profile/README.md`).
 
 Claude sessions can't change GitHub repo settings (HTTP 403): add a new repo to Remy's setup script (`set-github-about`) instead of trying.
+
+## Checks and alerts (always)
+
+Before starting work in a repo, look at its open findings and fix what the task touches or what is quick: code scanning alerts (`gh api 'repos/Supertext/<Repo>/code-scanning/alerts?state=open'`), secret scanning alerts (`…/secret-scanning/alerts?state=open`), open Dependabot PRs and the issue "Broken links in the docs". New workflows and workflow changes must pass actionlint and zizmor; PHP code must pass PHPStan at the repo's level. See `docs/DEVELOPER.md` → *Code quality and security checks*.
 
 ## Demo accounts rule (always)
 
@@ -150,7 +156,7 @@ Lessons from testing against the live API (October 2026), to apply in every plug
 
 ## This repo
 
-- Before committing: `phpunit` (PHPUnit 11; no Akeneo install needed) and PHP lint (`find src tests demo/project/supertext-demo -name '*.php' -print0 | xargs -0 -n1 php -l`). CI also builds the demo image and runs `tests/demo-check.sh` against MySQL 8.4, Elasticsearch 8.17 and the stand-in.
+- Before committing: `phpunit` (PHPUnit 11; no Akeneo install needed) and PHP lint (`find src tests demo/project/supertext-demo -name '*.php' -print0 | xargs -0 -n1 php -l`). CI also runs PHPStan (level 5, needs Akeneo's classes: see `docs/DEVELOPER.md` → *Code quality and security checks*), builds the demo image and runs `tests/demo-check.sh` against MySQL 8.4, Elasticsearch 8.17 and the stand-in.
 - The front end (`src/Resources/public/js/`, TypeScript/React) is compiled by the Akeneo project's own webpack, so it is only built inside the demo image (or an Akeneo project). Akeneo's loader is `transpileOnly`: type errors don't fail the build, so check changed screens in the demo. Strings go in all four `src/Resources/translations/jsmessages.{en_US,de_DE,fr_FR,it_IT}.yml` (quote values that contain `: `); server messages shown in the UI carry a `key` (`supertext_translation.error.<key>`) next to the English `message`.
 - Test UI changes in the demo (see `docs/DEVELOPER.md` → Demo) and regenerate the screenshots they affect (`tests/docs/screenshots.mjs`).
 - New settings go in `src/Settings/Settings.php`, `src/Controller/SettingsController.php`, `src/Resources/public/js/settings/SettingsPage.tsx`, all four jsmessages files **and** the settings table in `docs/INSTALLATION.md`.

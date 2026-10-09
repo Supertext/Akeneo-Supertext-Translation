@@ -1,0 +1,11 @@
+# PHPStan: see docs/DEVELOPER.md → Code quality and security checks.
+# CI installs Akeneo PIM (demo/project/composer.json) and points AKENEO_VENDOR at its vendor/.
+includes:
+    - phpstan-baseline.neon
+
+parameters:
+    level: 5
+    paths:
+        - src
+    bootstrapFiles:
+        - tests/phpstan-bootstrap.php

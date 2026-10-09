@@ -80,7 +80,7 @@ find src tests demo/project/supertext-demo -name '*.php' -print0 | xargs -0 -n1 
 
 The unit tests need only PHPUnit 11 (no Akeneo install). `tests/demo-check.sh` is the end-to-end test: it starts the demo image twice against MySQL and Elasticsearch with the stand-in API, checks the demo accounts (created once, passwords never logged), and translates the sample product and product model with `supertext:translate`, checking the stored values.
 
-**CI** (`.github/workflows/ci.yml`): lint and unit tests on every push; the `demo` job builds the demo image (about 20 minutes: Composer, Yarn and Akeneo's webpack build) and runs `tests/demo-check.sh` against MySQL 8.4 and Elasticsearch 8.17 service containers.
+**CI** (`.github/workflows/ci.yml`): lint and unit tests on every push; the `phpstan` job runs PHPStan (see *Code quality and security checks*); the `demo` job builds the demo image (about 20 minutes: Composer, Yarn and Akeneo's webpack build) and runs `tests/demo-check.sh` against MySQL 8.4 and Elasticsearch 8.17 service containers.
 
 ## Demo (Railway)
 
@@ -149,6 +149,15 @@ BASE_URL=http://127.0.0.1:8090 DEMO_ADMIN_EMAIL=… DEMO_ADMIN_PASSWORD=… DEMO
 ```
 
 The script saves a placeholder API key as the administrator first, and shows the live API address instead of the stand-in's on the settings page.
+
+## Code quality and security checks
+
+- **Checks** (`.github/workflows/checks.yml`): actionlint and zizmor lint the workflows on every push and pull request; dependency review fails a pull request that adds a package with a known vulnerability (moderate or worse). Third-party actions are pinned to commit SHAs (Dependabot keeps them current). Run the linters locally with `pip install actionlint-py zizmor`, then `actionlint` and `zizmor .github/workflows`.
+- **Links** (`.github/workflows/links.yml`): lychee checks the links in all Markdown files weekly and whenever docs change on `main`. Broken links open (or update) the issue "Broken links in the docs". Links that can't work from CI (local addresses, pages behind a login, placeholders) are excluded in `.lycheeignore`.
+- **PHPStan** (job `phpstan` in `ci.yml`, configuration in `phpstan.neon`): level 5 on `src/`. PHPStan needs Akeneo's classes, so the job installs Akeneo PIM from `demo/project/composer.json` (without scripts) and loads its autoloader through `tests/phpstan-bootstrap.php`. Locally, point `AKENEO_VENDOR` at the `vendor/` folder of any Akeneo PIM 2026 project: `AKENEO_VENDOR=/path/to/pim/vendor phpstan analyse` (PHPStan 2.x, e.g. the `phpstan.phar` from its GitHub releases). Existing findings that aren't fixed yet are listed in `phpstan-baseline.neon` (regenerate with `phpstan analyse --generate-baseline` after fixing some); new code must not add any.
+- **GitHub settings** (set by Remy's setup script, not in the repo): secret scanning with push protection (a push containing a known token format is rejected; findings under *Security → Secret scanning*) and CodeQL default setup (findings under *Security → Code scanning* and as pull request comments). CodeQL doesn't cover PHP, which is why this repo runs PHPStan.
+
+Before starting work in this repo, look at its open findings: code scanning alerts, secret scanning alerts, Dependabot pull requests and the issue "Broken links in the docs".
 
 ## Releasing
 
