@@ -2,6 +2,8 @@
 
 For editors: translate products and product models into your other locales with Supertext AI, then review the result in Akeneo as usual.
 
+The Supertext dialog and its messages follow your Akeneo interface language (English, German, French or Italian; set it as *UI locale* under *My settings*). The messages below are the English texts.
+
 ## Translate a product
 
 1. Open the product (Products → click the product) and save any changes first.

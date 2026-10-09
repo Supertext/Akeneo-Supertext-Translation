@@ -16,7 +16,10 @@ type Context = {
   preview: {units: number; targets: {[locale: string]: TargetPreview}};
 };
 
-type TargetResult = {status: 'translated' | 'nothing' | 'error'; translated: number; existing: number; message: string};
+/** A server message: English `message`, plus `key` (supertext_translation.error.<key>), `params` and untranslated `detail` for the UI. */
+type ServerMessage = {message: string; key?: string; params?: {[name: string]: string | number}; detail?: string};
+
+type TargetResult = ServerMessage & {status: 'translated' | 'nothing' | 'error'; translated: number; existing: number};
 
 type LanguageSetting = {locale: string; label: string; code: string; default_code: string; politeness: '' | 'more' | 'less'};
 
@@ -33,6 +36,21 @@ type SettingsData = {
   languages: LanguageSetting[];
   links: Links;
 };
+
+/** The message in the user's interface language; the English message if the key has no translation. */
+const localize = (data: ServerMessage): string => {
+  if (!data.key) {
+    return data.message;
+  }
+  const id = `supertext_translation.error.${data.key}`;
+  const text = __(id, data.params || {});
+  const localized = text === id ? data.message : text;
+
+  return text !== id && data.detail ? `${localized} (${data.detail})` : localized;
+};
+
+const localizeAll = (data: ServerMessage & {errors?: ServerMessage[]}): string =>
+  Array.isArray(data.errors) && data.errors.length > 0 ? data.errors.map(localize).join(' ') : localize(data);
 
 class ApiError extends Error {
   constructor(message: string, readonly links: Links | null = null) {
@@ -55,7 +73,7 @@ const request = async <T>(route: string, params: {[key: string]: string}, body?:
 
   const data = await response.json().catch(() => null);
   if (!response.ok) {
-    throw new ApiError((data && data.message) || __('supertext_translation.error.http', {status: response.status}), (data && data.links) || null);
+    throw new ApiError((data && data.message && localizeAll(data)) || __('supertext_translation.error.http', {status: response.status}), (data && data.links) || null);
   }
 
   return data as T;
@@ -72,7 +90,7 @@ const fetchSettings = () => request<SettingsData>('supertext_translation_rest_se
 const saveSettings = (input: object) => request<SettingsData>('supertext_translation_rest_settings_save', {}, input);
 
 const testConnection = (input: object) =>
-  request<{ok: boolean; message: string}>('supertext_translation_rest_settings_test', {}, input);
+  request<ServerMessage & {ok: boolean}>('supertext_translation_rest_settings_test', {}, input);
 
-export {ApiError, fetchContext, translate, fetchSettings, saveSettings, testConnection};
-export type {EntityType, Context, TargetResult, SettingsData, LanguageSetting, Links};
+export {ApiError, localize, fetchContext, translate, fetchSettings, saveSettings, testConnection};
+export type {EntityType, Context, TargetResult, SettingsData, LanguageSetting, Links, ServerMessage};

@@ -30,7 +30,7 @@ final class CurlTransport
         $handle = curl_init($url);
 
         if ($handle === false) {
-            throw new SupertextException('The Supertext service could not be reached.');
+            throw new SupertextException('The Supertext service could not be reached.', key: 'unreachable');
         }
 
         $responseHeaders = [];
@@ -67,7 +67,7 @@ final class CurlTransport
             $error = curl_error($handle);
             curl_close($handle);
 
-            throw new SupertextException('The Supertext service could not be reached. ' . $error);
+            throw new SupertextException('The Supertext service could not be reached. ' . $error, 0, null, 'unreachable', [], $error);
         }
 
         $status = (int) curl_getinfo($handle, CURLINFO_RESPONSE_CODE);

@@ -1,7 +1,7 @@
 import React, {useEffect, useState} from 'react';
 import styled from 'styled-components';
 import {Button, Checkbox, Field, Helper, Link, Locale, Modal, SelectInput, getColor} from 'akeneo-design-system';
-import {ApiError, Context, EntityType, Links, TargetResult, fetchContext, translate} from '../api';
+import {ApiError, Context, EntityType, Links, TargetResult, fetchContext, localize, translate} from '../api';
 
 const __ = require('oro/translator');
 
@@ -230,8 +230,8 @@ const TranslateModal = ({type, id, onClose, onTranslated}: Props) => {
                   ? result.existing > 0
                     ? __('supertext_translation.result.kept')
                     : __('supertext_translation.result.nothing')
-                  : result.message}
-                {result.status === 'translated' && result.message !== '' && ` ${result.message}`}
+                  : localize(result)}
+                {result.status === 'translated' && result.message !== '' && ` ${localize(result)}`}
               </Result>
             ))}
           </Results>

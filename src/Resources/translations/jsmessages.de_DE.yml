@@ -15,6 +15,38 @@ supertext_translation:
     error:
         network: Die Anfrage konnte nicht gesendet werden. Prüfen Sie die Verbindung und versuchen Sie es erneut.
         http: Die Anfrage ist fehlgeschlagen (HTTP {{ status }}).
+        choose_source: Wählen Sie die Sprache, aus der übersetzt wird.
+        choose_target: Wählen Sie mindestens eine Sprache, in die übersetzt wird.
+        save_failed: Die Übersetzung konnte nicht gespeichert werden. Details stehen im Anwendungsprotokoll.
+        unknown_type: Unbekannter Datensatztyp.
+        forbidden_product: Sie dürfen dieses Produkt nicht bearbeiten.
+        forbidden_product_model: Sie dürfen dieses Produktmodell nicht bearbeiten.
+        entity_not_found: Nicht gefunden.
+        forbidden_settings: Sie dürfen die Systemkonfiguration nicht ändern.
+        no_api_key: Es ist kein Supertext-API-Schlüssel eingerichtet.
+        connected: Verbunden mit {{ url }}.
+        unreachable: Der Supertext-Dienst ist nicht erreichbar.
+        auth_failed: Die Anmeldung ist fehlgeschlagen. Prüfen Sie den Supertext-API-Schlüssel.
+        not_found: Die angeforderte Supertext-Ressource wurde nicht gefunden.
+        too_large: Der Inhalt ist zu gross, um ihn bei Supertext in einem Durchgang zu übersetzen.
+        rate_limited: Zu viele Anfragen an Supertext. Versuchen Sie es in Kürze erneut.
+        unavailable: Der Supertext-Dienst ist zurzeit nicht verfügbar.
+        http_status: Supertext hat mit HTTP {{ status }} geantwortet.
+        no_file_id: Supertext hat keine Datei-ID zurückgegeben.
+        failed: Supertext konnte das Dokument nicht übersetzen.
+        limit_exceeded: Ihr Supertext-Übersetzungslimit ist überschritten. Bitte erweitern Sie Ihr Abonnement.
+        deleted: Das Dokument wurde bei Supertext gelöscht, bevor es heruntergeladen werden konnte.
+        timeout: Zeitüberschreitung beim Warten auf die Supertext-Übersetzung.
+        empty: Das übersetzte Dokument war leer.
+        no_text: Supertext hat keinen Text zurückgegeben.
+        too_long: 'Die Übersetzung ist länger, als das Attribut erlaubt: {{ attributes }}.'
+        partly_too_long: 'Nicht übersetzt, weil die Übersetzung zu lang ist: {{ attributes }}.'
+        rejected: Akeneo hat die Übersetzung nicht akzeptiert.
+        unknown_environment: Unbekannte API-Umgebung.
+        invalid_url: Die API-Adresse muss mit https:// beginnen.
+        missing_url: Geben Sie für eine eigene Umgebung die API-Adresse ein.
+        invalid_timeout: Das Zeitlimit muss zwischen 30 und 1800 Sekunden liegen.
+        invalid_code: '«{{ code }}» ist kein gültiger Sprachcode für {{ locale }} (Beispiel: de-CH).'
     modal:
         title: Mit Supertext übersetzen
         from: Übersetzen aus

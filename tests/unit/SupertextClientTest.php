@@ -81,6 +81,7 @@ final class SupertextClientTest extends TestCase
             self::fail('Expected an exception');
         } catch (SupertextException $e) {
             self::assertStringContainsString('Too many requests', $e->getMessage());
+            self::assertSame('rate_limited', $e->key);
         }
 
         self::assertCount(5, $this->calls);
@@ -116,6 +117,7 @@ final class SupertextClientTest extends TestCase
             self::fail('Expected an exception');
         } catch (SupertextException $e) {
             self::assertStringContainsString('limit is exceeded', $e->getMessage());
+            self::assertSame('limit_exceeded', $e->key);
         }
 
         self::assertSame('DELETE', end($this->calls)['method']);

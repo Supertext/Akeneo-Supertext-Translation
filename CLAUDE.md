@@ -23,6 +23,10 @@ Everywhere an administrator enters or is told about the API key — the settings
 
 Wording: "No Supertext account yet? Create one at supertext.com. Generate your API key at supertext.com → Integrations → API (requires the Admin role)." In the UI, links open in a new tab (`target="_blank" rel="noopener"`); where the CMS shows plain text only, use the bare URLs.
 
+## UI languages (always)
+
+The plugin's own UI (buttons, panels, dialogs, settings, permissions, messages) is available in English, German, French and Italian through the CMS's own translation mechanism, so it follows the user's back-end language. New or changed strings get all four languages in the same commit. Formal address (Sie, vous, Lei), the CMS's own terms in each language, "Supertext", placeholders and URLs never translated.
+
 ## Plugin version on the settings screen (always)
 
 Where the CMS doesn't show the plugin's version itself, the plugin's own settings or status screen does (CLI-only plugins print it in their check command). It is read at runtime from the official version source (see *Releases*), never a second hardcoded copy, and links to the GitHub release when it is an X.Y.Z version.
@@ -147,9 +151,9 @@ Lessons from testing against the live API (October 2026), to apply in every plug
 ## This repo
 
 - Before committing: `phpunit` (PHPUnit 11; no Akeneo install needed) and PHP lint (`find src tests demo/project/supertext-demo -name '*.php' -print0 | xargs -0 -n1 php -l`). CI also builds the demo image and runs `tests/demo-check.sh` against MySQL 8.4, Elasticsearch 8.17 and the stand-in.
-- The front end (`src/Resources/public/js/`, TypeScript/React) is compiled by the Akeneo project's own webpack, so it is only built inside the demo image (or an Akeneo project). Akeneo's loader is `transpileOnly`: type errors don't fail the build, so check changed screens in the demo. Strings go in both `src/Resources/translations/jsmessages.*.yml` (quote values that contain `: `).
+- The front end (`src/Resources/public/js/`, TypeScript/React) is compiled by the Akeneo project's own webpack, so it is only built inside the demo image (or an Akeneo project). Akeneo's loader is `transpileOnly`: type errors don't fail the build, so check changed screens in the demo. Strings go in all four `src/Resources/translations/jsmessages.{en_US,de_DE,fr_FR,it_IT}.yml` (quote values that contain `: `); server messages shown in the UI carry a `key` (`supertext_translation.error.<key>`) next to the English `message`.
 - Test UI changes in the demo (see `docs/DEVELOPER.md` → Demo) and regenerate the screenshots they affect (`tests/docs/screenshots.mjs`).
-- New settings go in `src/Settings/Settings.php`, `src/Controller/SettingsController.php`, `src/Resources/public/js/settings/SettingsPage.tsx`, the jsmessages files **and** the settings table in `docs/INSTALLATION.md`.
+- New settings go in `src/Settings/Settings.php`, `src/Controller/SettingsController.php`, `src/Resources/public/js/settings/SettingsPage.tsx`, all four jsmessages files **and** the settings table in `docs/INSTALLATION.md`.
 - Field rules live in `src/Translation/EntityTranslator.php` and `src/Translation/Planner.php`; keep "Field rules" in `docs/DEVELOPER.md` and "What is translated" in `docs/USER_GUIDE.md` in sync.
 - Keep `src/Api/` and `src/Translation/Planner.php` free of Akeneo and Symfony classes (unit tests run without Akeneo).
 - The bundle name `SupertextTranslationBundle`, the route names `supertext_translation_*`, the form extension codes and the settings row `pim_configuration.supertext_translation` are stored in or used by users' installations; renaming them is a breaking change.

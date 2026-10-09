@@ -15,6 +15,38 @@ supertext_translation:
     error:
         network: The request could not be sent. Check your connection and try again.
         http: The request failed (HTTP {{ status }}).
+        choose_source: Choose the language to translate from.
+        choose_target: Choose at least one language to translate into.
+        save_failed: The translation could not be saved. See the application log for details.
+        unknown_type: Unknown entity type.
+        forbidden_product: You are not allowed to edit this product.
+        forbidden_product_model: You are not allowed to edit this product model.
+        entity_not_found: Not found.
+        forbidden_settings: You are not allowed to change the system configuration.
+        no_api_key: No Supertext API key is configured.
+        connected: Connected to {{ url }}.
+        unreachable: The Supertext service could not be reached.
+        auth_failed: Authentication failed. Please check the Supertext API key.
+        not_found: The requested Supertext resource was not found.
+        too_large: The content is too large for Supertext to translate in one go.
+        rate_limited: Too many requests to Supertext. Please try again shortly.
+        unavailable: The Supertext service is currently unavailable.
+        http_status: Supertext answered with HTTP {{ status }}.
+        no_file_id: Supertext did not return a file id.
+        failed: Supertext could not translate the document.
+        limit_exceeded: Your Supertext translation limit is exceeded. Please upgrade your subscription.
+        deleted: The document was deleted at Supertext before it could be downloaded.
+        timeout: Timed out waiting for the Supertext translation.
+        empty: The translated document was empty.
+        no_text: Supertext returned no text.
+        too_long: 'The translation is longer than the attribute allows: {{ attributes }}.'
+        partly_too_long: 'Not translated because the translation is too long: {{ attributes }}.'
+        rejected: Akeneo did not accept the translation.
+        unknown_environment: Unknown API environment.
+        invalid_url: The API address must start with https://.
+        missing_url: Enter the API address for a custom environment.
+        invalid_timeout: The timeout must be between 30 and 1800 seconds.
+        invalid_code: '"{{ code }}" is not a valid language code for {{ locale }} (example: de-CH).'
     modal:
         title: Translate with Supertext
         from: Translate from

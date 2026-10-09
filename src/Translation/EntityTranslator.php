@@ -141,8 +141,9 @@ final class EntityTranslator
     /**
      * @param list<string> $targets
      *
-     * @return array<string, array{status: string, translated: int, existing: int, message: string}>
-     *         status: "translated", "nothing" (no text to translate or all kept), "error"
+     * @return array<string, array{status: string, translated: int, existing: int, message: string, key: string, params: array<string, string|int>, detail: string}>
+     *         status: "translated", "nothing" (no text to translate or all kept), "error";
+     *         message: English; key/params/detail: for the UI (`supertext_translation.error.<key>`)
      */
     public function translate(EntityWithValuesInterface $entity, string $source, array $targets, bool $overwrite): array
     {
@@ -153,7 +154,7 @@ final class EntityTranslator
         $updater = $entity instanceof ProductModelInterface ? $this->productModelUpdater : $this->productUpdater;
 
         if (!$client->hasApiKey()) {
-            throw new SupertextException('No Supertext API key is configured.');
+            throw new SupertextException('No Supertext API key is configured.', key: 'no_api_key');
         }
 
         $baseline = $this->violationKeys($entity);
@@ -166,7 +167,7 @@ final class EntityTranslator
             $plan = Planner::plan($units, $target, $this->channelLocales(), $this->hasTextCallback($entity), $overwrite);
 
             if ($plan['translate'] === []) {
-                $results[$target] = ['status' => 'nothing', 'translated' => 0, 'existing' => $plan['existing'], 'message' => ''];
+                $results[$target] = ['status' => 'nothing', 'translated' => 0, 'existing' => $plan['existing'], 'message' => '', 'key' => '', 'params' => [], 'detail' => ''];
 
                 continue;
             }
@@ -174,7 +175,7 @@ final class EntityTranslator
             try {
                 $translations = $this->translateUnits($client, $plan['translate'], $source, $target);
             } catch (SupertextException $e) {
-                $results[$target] = ['status' => 'error', 'translated' => 0, 'existing' => $plan['existing'], 'message' => $e->getMessage()];
+                $results[$target] = ['status' => 'error', 'translated' => 0, 'existing' => $plan['existing'], 'key' => $e->key, 'params' => $e->params, 'detail' => $e->detail, 'message' => $e->getMessage()];
 
                 continue;
             }
@@ -207,6 +208,9 @@ final class EntityTranslator
                     'translated' => 0,
                     'existing'   => $plan['existing'],
                     'message'    => $tooLong !== [] ? sprintf('The translation is longer than the attribute allows: %s.', implode(', ', $tooLong)) : 'Supertext returned no text.',
+                    'key'        => $tooLong !== [] ? 'too_long' : 'no_text',
+                    'params'     => $tooLong !== [] ? ['attributes' => implode(', ', $tooLong)] : [],
+                    'detail'     => '',
                 ];
 
                 continue;
@@ -227,7 +231,8 @@ final class EntityTranslator
                 } catch (\Throwable) {
                 }
 
-                $results[$target] = ['status' => 'error', 'translated' => 0, 'existing' => $plan['existing'], 'message' => 'Akeneo did not accept the translation: ' . implode(' ', array_unique(array_values($violations)))];
+                $detail           = implode(' ', array_unique(array_values($violations)));
+                $results[$target] = ['status' => 'error', 'translated' => 0, 'existing' => $plan['existing'], 'message' => 'Akeneo did not accept the translation: ' . $detail, 'key' => 'rejected', 'params' => [], 'detail' => $detail];
 
                 continue;
             }
@@ -235,7 +240,15 @@ final class EntityTranslator
             $changed  = true;
             $count    = array_sum(array_map('count', $values));
             $message  = $tooLong !== [] ? sprintf('Not translated because the translation is too long: %s.', implode(', ', $tooLong)) : '';
-            $results[$target] = ['status' => 'translated', 'translated' => $count, 'existing' => $plan['existing'], 'message' => $message];
+            $results[$target] = [
+                'status'     => 'translated',
+                'translated' => $count,
+                'existing'   => $plan['existing'],
+                'message'    => $message,
+                'key'        => $tooLong !== [] ? 'partly_too_long' : '',
+                'params'     => $tooLong !== [] ? ['attributes' => implode(', ', $tooLong)] : [],
+                'detail'     => '',
+            ];
         }
 
         if ($changed) {

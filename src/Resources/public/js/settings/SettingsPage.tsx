@@ -2,7 +2,7 @@ import React, {useEffect, useState} from 'react';
 import styled from 'styled-components';
 import {Breadcrumb, Button, Field, Helper, Link, Locale, SectionTitle, SelectInput, Table, TextInput, getColor} from 'akeneo-design-system';
 import {PageContent, PageHeader, PimView, useRoute} from '@akeneo-pim-community/shared';
-import {ApiError, LanguageSetting, SettingsData, fetchSettings, saveSettings, testConnection} from '../api';
+import {ApiError, LanguageSetting, SettingsData, fetchSettings, localize, saveSettings, testConnection} from '../api';
 
 const __ = require('oro/translator');
 
@@ -76,7 +76,7 @@ const SettingsPage = () => {
   const test = () => {
     setBusy(true);
     testConnection(input())
-      .then(result => setMessage({level: result.ok ? 'success' : 'error', text: result.message}))
+      .then(result => setMessage({level: result.ok ? 'success' : 'error', text: localize(result)}))
       .catch((e: ApiError) => setMessage({level: 'error', text: e.message}))
       .finally(() => setBusy(false));
   };

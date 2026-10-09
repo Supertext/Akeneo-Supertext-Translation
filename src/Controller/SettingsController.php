@@ -40,7 +40,7 @@ final class SettingsController
     public function getAction(): JsonResponse
     {
         if (!$this->securityFacade->isGranted(self::ACL)) {
-            return new JsonResponse(['message' => 'You are not allowed to change the system configuration.'], Response::HTTP_FORBIDDEN);
+            return new JsonResponse(['message' => 'You are not allowed to change the system configuration.', 'key' => 'forbidden_settings'], Response::HTTP_FORBIDDEN);
         }
 
         return new JsonResponse($this->payload());
@@ -49,14 +49,14 @@ final class SettingsController
     public function saveAction(Request $request): JsonResponse
     {
         if (!$this->securityFacade->isGranted(self::ACL)) {
-            return new JsonResponse(['message' => 'You are not allowed to change the system configuration.'], Response::HTTP_FORBIDDEN);
+            return new JsonResponse(['message' => 'You are not allowed to change the system configuration.', 'key' => 'forbidden_settings'], Response::HTTP_FORBIDDEN);
         }
 
         $input  = json_decode($request->getContent(), true);
         $errors = $this->settings->update(\is_array($input) ? $input : []);
 
         if ($errors !== []) {
-            return new JsonResponse(['message' => implode(' ', $errors), 'errors' => $errors], Response::HTTP_UNPROCESSABLE_ENTITY);
+            return new JsonResponse(['message' => implode(' ', array_column($errors, 'message')), 'errors' => $errors], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
         return new JsonResponse($this->payload());
@@ -66,7 +66,7 @@ final class SettingsController
     public function testAction(Request $request): JsonResponse
     {
         if (!$this->securityFacade->isGranted(self::ACL)) {
-            return new JsonResponse(['message' => 'You are not allowed to change the system configuration.'], Response::HTTP_FORBIDDEN);
+            return new JsonResponse(['message' => 'You are not allowed to change the system configuration.', 'key' => 'forbidden_settings'], Response::HTTP_FORBIDDEN);
         }
 
         $input = json_decode($request->getContent(), true);
@@ -79,16 +79,16 @@ final class SettingsController
         }
 
         if ($key === '') {
-            return new JsonResponse(['ok' => false, 'message' => 'No Supertext API key is configured.'], Response::HTTP_OK);
+            return new JsonResponse(['ok' => false, 'message' => 'No Supertext API key is configured.', 'key' => 'no_api_key'], Response::HTTP_OK);
         }
 
         try {
             (new SupertextClient($key, $url, new CurlTransport(30), 30))->validateApiKey();
         } catch (SupertextException $e) {
-            return new JsonResponse(['ok' => false, 'message' => $e->getMessage()], Response::HTTP_OK);
+            return new JsonResponse(['ok' => false] + $e->toArray(), Response::HTTP_OK);
         }
 
-        return new JsonResponse(['ok' => true, 'message' => sprintf('Connected to %s.', $url)]);
+        return new JsonResponse(['ok' => true, 'message' => sprintf('Connected to %s.', $url), 'key' => 'connected', 'params' => ['url' => $url]]);
     }
 
     /** @return array<string, mixed> */

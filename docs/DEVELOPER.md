@@ -21,11 +21,13 @@ A Symfony bundle for Akeneo PIM Community Edition 2026 (Symfony 5.4, PHP 8.3). C
 | `src/Resources/config/form_extensions/supertext.yml` | Akeneo form extensions: the entry in the "…" menu (`secondary-actions`) of the product and product model edit forms, and the System menu item. |
 | `src/Resources/config/requirejs.yml` | Module aliases and the controller for the route `supertext_translation_settings_index`. |
 | `src/Resources/public/js/` | Front end (TypeScript/React, built by Akeneo's webpack): `product/translate-action.tsx` (Backbone view for the menu entry), `product/TranslateModal.tsx`, `settings/` (System → Supertext), `api.ts`. |
-| `src/Resources/translations/jsmessages.{en_US,de_DE}.yml` | UI strings (English and German). API and console messages are English. |
+| `src/Resources/translations/jsmessages.{en_US,de_DE,fr_FR,it_IT}.yml` | UI strings (English, German, French, Italian), loaded by Akeneo's `oro/translator` in the user's UI locale. Console messages and logs are English. |
 
 How Akeneo picks up the front end: `bin/console pim:installer:assets` copies `Resources/public` to `public/bundles/supertexttranslation/`, dumps the routes and translations; `yarn run webpack` compiles every `.ts`/`.tsx` under `public/bundles` (with Akeneo's `transpileOnly` TypeScript loader); `yarn run update-extensions` merges all bundles' `form_extensions/*.yml` into `public/js/extensions.json`. That's why installing or updating the bundle needs a front-end rebuild.
 
 **Saving:** the translator calls `pim_catalog.updater.product` (or `…product_model`) with standard-format values, validates with `pim_catalog.validator.product` and saves with `pim_catalog.saver.product` (or `…product_model`), the same path Akeneo's imports use. Versioning (History tab), completeness and the Elasticsearch index follow from that. Violations that appear after applying one language put that language's previous values back, so the other languages can still be saved; violations that existed before are ignored.
+
+**Interface languages:** every text the UI shows comes from the `jsmessages` files. The internal API answers errors with an English `message` (also used by the console and logs) plus a `key`, `params` and an untranslated `detail` (what Supertext, cURL or Akeneo's validator said); `api.ts` → `localize()` shows `supertext_translation.error.<key>` in the user's language with the detail in brackets, and falls back to `message` for an unknown key. `SupertextException` carries the key (keep `src/Api` free of Symfony's translator), as do the per-locale results of `EntityTranslator::translate()` and the validation errors of `Settings::update()`. `tests/unit/TranslationFilesTest.php` checks that all four files have the same keys and placeholders and that every key the PHP code sends has an English text.
 
 **Permissions:** translating checks Akeneo's existing ACLs `pim_enrich_product_edit_attributes` / `pim_enrich_product_model_edit_attributes` (in the form extensions and in the controller); the settings check `oro_config_system`. The bundle adds no ACL of its own, because a new ACL is denied to every role until someone grants it.
 
@@ -72,7 +74,7 @@ PHP changes need `rm -rf var/cache`; translation changes need `bin/console pim:i
 ## Tests
 
 ```bash
-phpunit                                                     # unit tests (src/Api, src/Translation/Planner)
+phpunit                                                     # unit tests (src/Api, src/Translation/Planner, translation files)
 find src tests demo/project/supertext-demo -name '*.php' -print0 | xargs -0 -n1 php -l
 ```
 
@@ -161,8 +163,8 @@ Planned: submit the package to Packagist.
 ## Conventions
 
 - PSR-12, PHP 8.3, strict types; keep `src/Api/` and `src/Translation/Planner.php` free of Akeneo classes (the unit tests run without Akeneo).
-- New settings: `src/Settings/Settings.php` (`update()` validates), `SettingsController::payload()`, `settings/SettingsPage.tsx`, both `jsmessages` files **and** the settings table in [INSTALLATION.md](INSTALLATION.md#settings).
-- UI strings in `jsmessages.en_US.yml` and `jsmessages.de_DE.yml`; quote YAML values that contain a colon followed by a space.
+- New settings: `src/Settings/Settings.php` (`update()` validates), `SettingsController::payload()`, `settings/SettingsPage.tsx`, all four `jsmessages` files **and** the settings table in [INSTALLATION.md](INSTALLATION.md#settings).
+- UI strings in `jsmessages.en_US.yml`, `jsmessages.de_DE.yml`, `jsmessages.fr_FR.yml` and `jsmessages.it_IT.yml`: every new string in all four (formal address: Sie, vous, Lei; Akeneo's own terms in each language, e.g. fr *locale*, *canal*, *modèle de produit*, it *impostazione locale*, *canale*, *modello di prodotto*; never translate "Supertext", placeholders or URLs). Quote YAML values that contain a colon followed by a space (French: a no-break space before `?` and `:`). New server messages get a `key` with an `error.*` text in all four files.
 - The bundle name, the route names and the form extension codes are part of users' installations; renaming them is a breaking change.
 - Keep the three docs in `docs/` current with every change (see `CLAUDE.md`).
 

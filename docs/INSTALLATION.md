@@ -95,6 +95,10 @@ Akeneo translates between **locales**, and a locale is active when a channel use
 
 Localizable **text** and **text area** attributes, rich text included (headings, bold text, links and lists are kept). Everything else (identifiers, options, numbers, assets, …) stays as it is. The [user guide](USER_GUIDE.md#what-is-translated) has the details.
 
+## Interface languages
+
+The bundle's screens (the *Translate with Supertext* dialog, System → Supertext and their messages) are available in English, German, French and Italian. They follow each user's Akeneo interface language: the *UI locale* in the user's own settings (user menu → *My settings*). Other UI locales show the English texts. Console commands and log entries stay English.
+
 ## Permissions
 
 | Action | Akeneo permission (System → Roles → Permissions) |

@@ -141,7 +141,7 @@ final class SupertextClient
         $fileId = (string) ($data['file_id'] ?? '');
 
         if ($fileId === '') {
-            throw new SupertextException('Supertext did not return a file id.');
+            throw new SupertextException('Supertext did not return a file id.', key: 'no_file_id');
         }
 
         return $fileId;
@@ -162,17 +162,17 @@ final class SupertextClient
                 case 'done':
                     return;
                 case 'error':
-                    throw new SupertextException('Supertext could not translate the document.');
+                    throw new SupertextException('Supertext could not translate the document.', key: 'failed');
                 case 'limit_exceeded':
-                    throw new SupertextException('Your Supertext translation limit is exceeded. Please upgrade your subscription.');
+                    throw new SupertextException('Your Supertext translation limit is exceeded. Please upgrade your subscription.', key: 'limit_exceeded');
                 case 'deleted':
-                    throw new SupertextException('The document was deleted at Supertext before it could be downloaded.');
+                    throw new SupertextException('The document was deleted at Supertext before it could be downloaded.', key: 'deleted');
             }
 
             ($this->sleep)($this->pollInterval);
         } while (microtime(true) < $deadline);
 
-        throw new SupertextException('Timed out waiting for the Supertext translation.');
+        throw new SupertextException('Timed out waiting for the Supertext translation.', key: 'timeout');
     }
 
     private function download(string $fileId): string
@@ -180,7 +180,7 @@ final class SupertextClient
         $body = $this->request('GET', 'translate/ai/file/' . rawurlencode($fileId) . '/translation')['body'];
 
         if (trim($body) === '') {
-            throw new SupertextException('The translated document was empty.');
+            throw new SupertextException('The translated document was empty.', key: 'empty');
         }
 
         return $body;
@@ -190,7 +190,7 @@ final class SupertextClient
     private function request(string $method, string $path, ?string $body = null, string $contentType = ''): array
     {
         if ($this->apiKey === '') {
-            throw new SupertextException('No Supertext API key is configured.');
+            throw new SupertextException('No Supertext API key is configured.', key: 'no_api_key');
         }
 
         $headers = [
@@ -206,7 +206,7 @@ final class SupertextClient
             try {
                 $response = ($this->transport)($method, $this->baseUrl . $path, $headers, $body);
             } catch (\Throwable $e) {
-                throw new SupertextException('Could not reach Supertext: ' . $e->getMessage(), 0, $e);
+                throw new SupertextException('Could not reach Supertext: ' . $e->getMessage(), 0, $e, 'unreachable', [], $e instanceof SupertextException ? $e->detail : $e->getMessage());
             }
 
             if ($response['status'] !== 429 || $attempt >= self::RATE_LIMIT_RETRIES) {
@@ -222,22 +222,22 @@ final class SupertextClient
             return $response;
         }
 
-        $message = match (true) {
-            $code === 401, $code === 403 => 'Authentication failed. Please check the Supertext API key.',
-            $code === 404                => 'The requested Supertext resource was not found.',
-            $code === 413                => 'The content is too large for Supertext to translate in one go.',
-            $code === 429                => 'Too many requests to Supertext. Please try again shortly.',
-            $code >= 500                 => 'The Supertext service is currently unavailable.',
-            default                      => sprintf('Supertext answered with HTTP %d.', $code),
+        [$key, $message] = match (true) {
+            $code === 401, $code === 403 => ['auth_failed', 'Authentication failed. Please check the Supertext API key.'],
+            $code === 404                => ['not_found', 'The requested Supertext resource was not found.'],
+            $code === 413                => ['too_large', 'The content is too large for Supertext to translate in one go.'],
+            $code === 429                => ['rate_limited', 'Too many requests to Supertext. Please try again shortly.'],
+            $code >= 500                 => ['unavailable', 'The Supertext service is currently unavailable.'],
+            default                      => ['http_status', sprintf('Supertext answered with HTTP %d.', $code)],
         };
 
-        $detail = trim(strip_tags($response['body']));
+        $detail = mb_substr(trim(strip_tags($response['body'])), 0, 200);
 
         if ($detail !== '') {
-            $message .= ' (' . mb_substr($detail, 0, 200) . ')';
+            $message .= ' (' . $detail . ')';
         }
 
-        throw new SupertextException($message, $code);
+        throw new SupertextException($message, $code, null, $key, $key === 'http_status' ? ['status' => $code] : [], $detail);
     }
 
     /** Seconds to wait before retry $attempt (0-based): Retry-After if sent, else 1, 2, 4, 8 plus jitter. */

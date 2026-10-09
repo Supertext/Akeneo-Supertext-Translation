@@ -146,7 +146,8 @@ final class Settings
      *
      * @param array<string, mixed> $input
      *
-     * @return list<string> validation messages (nothing is saved when there are any)
+     * @return list<array{key: string, params: array<string, string>, message: string}> validation errors
+     *         (English message, plus the UI key `supertext_translation.error.<key>`; nothing is saved when there are any)
      */
     public function update(array $input): array
     {
@@ -161,7 +162,7 @@ final class Settings
 
         if (\array_key_exists('environment', $input)) {
             if (!\in_array($input['environment'], self::ENVIRONMENTS, true)) {
-                $errors[] = 'Unknown API environment.';
+                $errors[] = ['key' => 'unknown_environment', 'params' => [], 'message' => 'Unknown API environment.'];
             } else {
                 $values['environment'] = $input['environment'];
             }
@@ -171,21 +172,21 @@ final class Settings
             $url = trim((string) $input['api_url']);
 
             if ($url !== '' && !preg_match('#^https?://[^\s]+$#i', $url)) {
-                $errors[] = 'The API address must start with https://.';
+                $errors[] = ['key' => 'invalid_url', 'params' => [], 'message' => 'The API address must start with https://.'];
             }
 
             $values['api_url'] = $url;
         }
 
         if (($values['environment'] ?? 'live') === 'custom' && trim((string) ($values['api_url'] ?? '')) === '') {
-            $errors[] = 'Enter the API address for a custom environment.';
+            $errors[] = ['key' => 'missing_url', 'params' => [], 'message' => 'Enter the API address for a custom environment.'];
         }
 
         if (\array_key_exists('timeout', $input)) {
             $timeout = (int) $input['timeout'];
 
             if ($timeout < 30 || $timeout > 1800) {
-                $errors[] = 'The timeout must be between 30 and 1800 seconds.';
+                $errors[] = ['key' => 'invalid_timeout', 'params' => [], 'message' => 'The timeout must be between 30 and 1800 seconds.'];
             } else {
                 $values['timeout'] = $timeout;
             }
@@ -203,7 +204,7 @@ final class Settings
                 $politeness = (string) ($language['politeness'] ?? '');
 
                 if ($code !== '' && !preg_match('/^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$/', $code)) {
-                    $errors[] = sprintf('"%s" is not a valid language code for %s (example: de-CH).', $code, $locale);
+                    $errors[] = ['key' => 'invalid_code', 'params' => ['code' => $code, 'locale' => $locale], 'message' => sprintf('"%s" is not a valid language code for %s (example: de-CH).', $code, $locale)];
 
                     continue;
                 }

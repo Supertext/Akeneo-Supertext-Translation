@@ -101,26 +101,25 @@ final class TranslateController
         $targets = \is_array($input) && \is_array($input['to'] ?? null) ? array_values(array_unique(array_map('strval', $input['to']))) : [];
 
         if (!\in_array($source, $locales, true)) {
-            return new JsonResponse(['message' => 'Choose the language to translate from.'], Response::HTTP_BAD_REQUEST);
+            return new JsonResponse(['message' => 'Choose the language to translate from.', 'key' => 'choose_source'], Response::HTTP_BAD_REQUEST);
         }
 
         $targets = array_values(array_filter($targets, static fn (string $locale): bool => $locale !== $source && \in_array($locale, $locales, true)));
 
         if ($targets === []) {
-            return new JsonResponse(['message' => 'Choose at least one language to translate into.'], Response::HTTP_BAD_REQUEST);
+            return new JsonResponse(['message' => 'Choose at least one language to translate into.', 'key' => 'choose_target'], Response::HTTP_BAD_REQUEST);
         }
 
         try {
             $results = $this->translator->translate($entity, $source, $targets, (bool) ($input['overwrite'] ?? false));
         } catch (SupertextException $e) {
-            return new JsonResponse([
-                'message' => $e->getMessage(),
+            return new JsonResponse($e->toArray() + [
                 'links'   => ['signup' => Settings::SIGNUP_URL, 'api_key' => Settings::API_KEY_URL],
             ], Response::HTTP_BAD_GATEWAY);
         } catch (\Throwable $e) {
             $this->logger->error('Supertext translation failed', ['exception' => $e]);
 
-            return new JsonResponse(['message' => 'The translation could not be saved. See the application log for details.'], Response::HTTP_INTERNAL_SERVER_ERROR);
+            return new JsonResponse(['message' => 'The translation could not be saved. See the application log for details.', 'key' => 'save_failed'], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
 
         return new JsonResponse(['results' => $results]);
@@ -129,11 +128,11 @@ final class TranslateController
     private function entity(string $type, string $id): EntityWithValuesInterface|JsonResponse
     {
         if (!isset(self::ACL[$type])) {
-            return new JsonResponse(['message' => 'Unknown entity type.'], Response::HTTP_NOT_FOUND);
+            return new JsonResponse(['message' => 'Unknown entity type.', 'key' => 'unknown_type'], Response::HTTP_NOT_FOUND);
         }
 
         if (!$this->securityFacade->isGranted(self::ACL[$type])) {
-            return new JsonResponse(['message' => 'You are not allowed to edit this ' . str_replace('_', ' ', $type) . '.'], Response::HTTP_FORBIDDEN);
+            return new JsonResponse(['message' => 'You are not allowed to edit this ' . str_replace('_', ' ', $type) . '.', 'key' => 'forbidden_' . $type], Response::HTTP_FORBIDDEN);
         }
 
         $entity = null;
@@ -145,7 +144,7 @@ final class TranslateController
         }
 
         if (!$entity instanceof EntityWithValuesInterface || ($type === 'product_model') !== ($entity instanceof ProductModelInterface)) {
-            return new JsonResponse(['message' => 'Not found.'], Response::HTTP_NOT_FOUND);
+            return new JsonResponse(['message' => 'Not found.', 'key' => 'entity_not_found'], Response::HTTP_NOT_FOUND);
         }
 
         return $entity;

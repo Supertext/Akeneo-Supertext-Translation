@@ -1,0 +1,97 @@
+supertext_translation:
+    action: Traduci con Supertext
+    menu:
+        settings: Supertext
+    loading: Caricamento…
+    no_account: Non ha ancora un account Supertext?
+    create_account: Ne crei uno su supertext.com
+    generate_key: Generi la Sua chiave API su
+    key_page: supertext.com → Integrations → API
+    admin_role: (richiede il ruolo Admin).
+    not_configured: Non è configurata alcuna chiave API Supertext. Un amministratore può inserirla in Sistema → Supertext.
+    unsaved:
+        title: Modifiche non salvate
+        message: Dopo la traduzione il modulo viene ricaricato e le modifiche non salvate andrebbero perse. Continuare senza salvare?
+    error:
+        network: Non è stato possibile inviare la richiesta. Verifichi la connessione e riprovi.
+        http: La richiesta non è riuscita (HTTP {{ status }}).
+        choose_source: Scelga la lingua da cui tradurre.
+        choose_target: Scelga almeno una lingua in cui tradurre.
+        save_failed: Non è stato possibile salvare la traduzione. I dettagli si trovano nel log dell'applicazione.
+        unknown_type: Tipo di record sconosciuto.
+        forbidden_product: Non è autorizzato a modificare questo prodotto.
+        forbidden_product_model: Non è autorizzato a modificare questo modello di prodotto.
+        entity_not_found: Non trovato.
+        forbidden_settings: Non è autorizzato a modificare la configurazione del sistema.
+        no_api_key: Non è configurata alcuna chiave API Supertext.
+        connected: Connesso a {{ url }}.
+        unreachable: Il servizio Supertext non è raggiungibile.
+        auth_failed: Autenticazione non riuscita. Verifichi la chiave API Supertext.
+        not_found: La risorsa Supertext richiesta non è stata trovata.
+        too_large: Il contenuto è troppo grande per essere tradotto da Supertext in una sola volta.
+        rate_limited: Troppe richieste a Supertext. Riprovi tra poco.
+        unavailable: Il servizio Supertext non è al momento disponibile.
+        http_status: Supertext ha risposto con HTTP {{ status }}.
+        no_file_id: Supertext non ha restituito alcun ID file.
+        failed: Supertext non è riuscito a tradurre il documento.
+        limit_exceeded: Il Suo limite di traduzione Supertext è stato superato. Passi a un abbonamento superiore.
+        deleted: Il documento è stato eliminato da Supertext prima che potesse essere scaricato.
+        timeout: Tempo scaduto in attesa della traduzione Supertext.
+        empty: Il documento tradotto era vuoto.
+        no_text: Supertext non ha restituito alcun testo.
+        too_long: 'La traduzione è più lunga di quanto consentito dall''attributo: {{ attributes }}.'
+        partly_too_long: 'Non tradotto perché la traduzione è troppo lunga: {{ attributes }}.'
+        rejected: Akeneo non ha accettato la traduzione.
+        unknown_environment: Ambiente API sconosciuto.
+        invalid_url: L'indirizzo API deve iniziare con https://.
+        missing_url: Inserisca l'indirizzo API per un ambiente personalizzato.
+        invalid_timeout: Il timeout deve essere compreso tra 30 e 1800 secondi.
+        invalid_code: '«{{ code }}» non è un codice lingua valido per {{ locale }} (esempio: de-CH).'
+    modal:
+        title: Traduci con Supertext
+        from: Traduci da
+        to: Traduci in
+        nothing: Non c'è alcun testo da tradurre in {{ language }}.
+        variant: 'I testi di questa variante provengono dal suo modello di prodotto: traduca invece il modello di prodotto.'
+        not_in_channel: Non utilizzata dai canali di questi valori
+        existing: Ha già un testo proprio ({{ count }} valori)
+        to_translate: '{{ count }} valori da tradurre'
+        overwrite: Sovrascrivi le traduzioni esistenti
+        overwrite_warning: 'Il testo esistente viene sostituito in: {{ languages }}. La scheda Cronologia conserva il testo precedente.'
+        translate: Traduci
+        translating: Traduzione in corso…
+        done: Fatto
+    result:
+        translated: tradotto ({{ count }} valori)
+        kept: mantenuto, ha già un testo proprio
+        nothing: niente da tradurre
+    settings:
+        title: Supertext
+        connection: Connessione
+        api_key: Chiave API
+        key_saved: È salvata una chiave ({{ hint }}). Ne inserisca una nuova per sostituirla.
+        key_from_environment: Impostata dalla variabile d'ambiente SUPERTEXT_API_KEY
+        key_help: Può incollarla con o senza il prefisso «Supertext-Auth-Key».
+        key_environment_help: Su questo server è impostata la variabile d'ambiente SUPERTEXT_API_KEY, che ha la precedenza.
+        environment: API Supertext
+        environments:
+            live: Live (api.supertext.com)
+            staging: Staging
+            testing: Testing
+            custom: Indirizzo personalizzato
+        api_url: Indirizzo API
+        url_from_environment: Impostato dalla variabile d'ambiente SUPERTEXT_API_URL ({{ url }}).
+        timeout: Timeout (secondi)
+        timeout_help: Quanto attendere al massimo per una lingua (da 30 a 1800).
+        languages: Lingue
+        languages_help: Ogni impostazione locale viene inviata a Supertext con il suo codice lingua (en_US diventa en-US). Sostituisca il codice o scelga la forma di cortesia, se necessario.
+        locale: Impostazione locale
+        code: Codice lingua Supertext
+        politeness: Forma di cortesia
+        politeness_default: Predefinita
+        politeness_more: Formale (Lei)
+        politeness_less: Informale (tu)
+        test: Verifica connessione
+        saved: Impostazioni salvate.
+        version: Supertext Translation per Akeneo PIM, versione
+        version_unknown: sconosciuta
