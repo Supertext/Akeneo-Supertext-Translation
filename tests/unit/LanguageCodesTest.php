@@ -46,6 +46,7 @@ final class LanguageCodesTest extends TestCase
         self::assertSame('fr-CH', LanguageCodes::target('fr-FR', ' fr-CH '));
         self::assertSame('pt', LanguageCodes::source('en-US', 'pt-BR'));
         self::assertSame('de-DE', LanguageCodes::target('de', '  '));
+        self::assertSame('fr-FR', LanguageCodes::target('fr-CH', 'fr'), 'a bare override gets the default region');
     }
 
     public function testUnknownBareCodeIsSentUnchanged(): void

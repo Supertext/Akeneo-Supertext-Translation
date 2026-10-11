@@ -86,14 +86,10 @@ final class LanguageCodes
         return explode('-', $code)[0];
     }
 
-    /** Target code to send: the override as given, else the locale with a region ("de" → "de-DE"). */
+    /** Target code to send: the override, else the locale; without a region it gets the default one ("de" → "de-DE"). */
     public static function target(string $locale, string $override = ''): string
     {
-        if (trim($override) !== '') {
-            return self::normalize($override);
-        }
-
-        $code = self::normalize($locale);
+        $code = self::normalize(trim($override) !== '' ? $override : $locale);
         if ($code === '' || str_contains($code, '-')) {
             return $code;
         }
