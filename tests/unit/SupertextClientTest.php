@@ -53,6 +53,21 @@ final class SupertextClientTest extends TestCase
         self::assertStringContainsString("filename=\"content.html\"\r\nContent-Type: text/html\r\n\r\n<div", $post['body']);
     }
 
+    public function testSendsBareTargetsWithTheirDefaultRegion(): void
+    {
+        $client = $this->client(fn (string $method, string $url) => match (true) {
+            $method === 'POST'                  => ['status' => 200, 'body' => '{"file_id":"f1"}'],
+            str_ends_with($url, '/status')      => ['status' => 200, 'body' => '{"status":"done"}'],
+            str_ends_with($url, '/translation') => ['status' => 200, 'body' => '<div data-st-id="0">Hallo</div>'],
+            default                             => ['status' => 200, 'body' => '{}'],
+        });
+
+        $client->translateDocument('<div data-st-id="0">Hello</div>', 'de', 'en_US');
+
+        self::assertStringContainsString("name=\"target_lang\"\r\n\r\nde-DE\r\n", $this->calls[0]['body']);
+        self::assertStringContainsString("name=\"source_lang\"\r\n\r\nen\r\n", $this->calls[0]['body']);
+    }
+
     public function testAcceptsTheKeyWithItsPrefix(): void
     {
         $client = $this->client(fn () => ['status' => 200, 'body' => '{}'], '  Supertext-Auth-Key abc+/= ');

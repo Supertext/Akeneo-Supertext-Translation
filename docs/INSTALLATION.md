@@ -88,7 +88,7 @@ Akeneo translates between **locales**, and a locale is active when a channel use
 ![The E-commerce channel with the locales German, English, French and Italian (Switzerland)](images/09-channel-locales.png)
 
 - Values of attributes that are *localizable* get one value per locale. Values that are also *scopable* (per channel) are translated into the locales of their channel only.
-- Each locale goes to Supertext as its language code: `de_CH` becomes `de-CH`, `en_US` becomes `en-US`. Override the code under **System → Supertext → Languages** if you need another one (for example `de-CH` for an `de_DE` locale whose texts follow Swiss spelling).
+- Each target locale goes to Supertext as its language code with the region: `de_CH` becomes `de-CH`, `en_US` becomes `en-US`. The source locale is sent without region (`en_US` → `en`), as Supertext expects. Override the code under **System → Supertext → Languages** if you need another one (for example `de-CH` for a `de_DE` locale whose texts follow Swiss spelling). Give the override with a region: a bare code such as `de` is sent as `de-DE` (`fr` → `fr-FR`, `en` → `en-US`, …), because Supertext rejects target languages without one.
 - **Form of address** per locale: *Default*, *Formal* or *Informal* (for languages that distinguish them, such as German *Sie* and *du*).
 
 ## Which values are translated
@@ -117,7 +117,7 @@ There is no separate permission for translating: whoever may edit a product's at
 | Supertext API | System → Supertext | Live | *Live* (`https://api.supertext.com/v1/`), *Staging*, *Testing* or *Custom address*. `SUPERTEXT_API_URL` overrides it (for tests against a stand-in). |
 | API address | System → Supertext | none | Only for *Custom address*. |
 | Timeout (seconds) | System → Supertext | 180 | How long to wait for one language (30 to 1800). |
-| Supertext language code | System → Supertext → Languages | the locale with a hyphen | Per locale, e.g. `de-CH`. |
+| Supertext language code | System → Supertext → Languages | the locale with a hyphen | Per locale, e.g. `de-CH`. A code without region gets the usual one (`de` → `de-DE`). |
 | Form of address | System → Supertext → Languages | Default | Per locale: Default, Formal, Informal. |
 
 The bottom of System → Supertext shows the installed version of the bundle (as Composer reports it) with a link to its GitHub release; `bin/console supertext:check` prints it too.

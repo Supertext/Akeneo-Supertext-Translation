@@ -3,7 +3,8 @@
  * Docs screenshots and CI only: answers like the Supertext AI file translation API v1 and
  * returns Swiss German, French and Italian for the demo's sample product and product model
  * (samples.json: translations of the sample content, keyed by the target's primary subtag).
- * Unknown text comes back as "[<target>] text". Listens on :8765 (any API key).
+ * Unknown text comes back as "[<target>] text". Like the real API, it rejects bare targets ("de")
+ * and regional sources ("en-US") with INVALID_LANGUAGE_PAIR. Listens on :8765 (any API key).
  */
 import http from 'node:http'
 import { randomBytes } from 'node:crypto'
@@ -35,8 +36,14 @@ http
       const form = await new Request('http://x', { method: 'POST', headers: req.headers, body: Buffer.concat(chunks) }).formData()
       const file = form.get('file')
       if (!file || file.type !== 'text/html') return send(415, { detail: 'FILETYPE_NOT_ALLOWED' })
+      // Like the real API: bare targets ("de") and regional sources ("en-US") are rejected.
+      const target = String(form.get('target_lang') ?? '')
+      const source = form.get('source_lang')
+      if (!/^[a-z]{2,3}-([A-Z]{2}|[A-Z][a-z]{3}|\d{3})$/.test(target) || (source !== null && !/^[a-z]{2,3}$/.test(String(source)))) {
+        return send(400, { detail: 'INVALID_LANGUAGE_PAIR' })
+      }
       const id = randomBytes(6).toString('hex')
-      files.set(id, { html: await file.text(), target: String(form.get('target_lang')) })
+      files.set(id, { html: await file.text(), target })
       return send(200, { file_id: id })
     }
     const match = path.match(/file\/([a-f0-9]+)(\/status|\/translation)?$/)

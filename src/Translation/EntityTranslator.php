@@ -279,7 +279,7 @@ final class EntityTranslator
             $html = $client->translateDocument(
                 HtmlDocument::build($chunk),
                 $this->settings->languageCode($target),
-                $this->settings->languageCode($source),
+                $this->settings->sourceCode($source),
                 $this->settings->politeness($target) ?: 'default',
             );
             $translations += HtmlDocument::parse($html, $isHtml);

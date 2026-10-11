@@ -17,3 +17,6 @@ All notable changes to Supertext Translation for Akeneo PIM.
 - Retries when the Supertext API answers HTTP 429 (rate limit).
 - English and German interface.
 - Demo for Railway (`demo/`) with demo accounts, four locales, a sample product and a sample product model created on every start.
+
+### Fixed
+- A *Supertext language code* without a region (e.g. `de`) is now sent as `de-DE` (`fr` → `fr-FR`, `en` → `en-US`, …) and codes such as `de-ch` are normalized to `de-CH`; Supertext rejects target languages without a region. The source language is sent without region, as before.

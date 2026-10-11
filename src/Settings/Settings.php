@@ -11,6 +11,7 @@ declare(strict_types=1);
 namespace Supertext\AkeneoTranslationBundle\Settings;
 
 use Supertext\AkeneoTranslationBundle\Api\CurlTransport;
+use Supertext\AkeneoTranslationBundle\Api\LanguageCodes;
 use Supertext\AkeneoTranslationBundle\Api\SupertextClient;
 
 /**
@@ -107,17 +108,21 @@ final class Settings
         return $value >= 30 && $value <= 1800 ? $value : self::DEFAULT_TIMEOUT;
     }
 
-    /** Supertext language for an Akeneo locale: the configured code, else BCP-47 (de_CH -> de-CH). */
+    /** Supertext target code for an Akeneo locale: the configured code, else BCP-47 with a region (de_CH -> de-CH). */
     public function languageCode(string $locale): string
     {
-        $code = trim((string) ($this->languages()[$locale]['code'] ?? ''));
+        return LanguageCodes::target($locale, (string) ($this->languages()[$locale]['code'] ?? ''));
+    }
 
-        return $code !== '' ? $code : self::defaultLanguageCode($locale);
+    /** Supertext source code for an Akeneo locale: the bare language of the configured code or the locale (en_US -> en). */
+    public function sourceCode(string $locale): string
+    {
+        return LanguageCodes::source($locale, (string) ($this->languages()[$locale]['code'] ?? ''));
     }
 
     public static function defaultLanguageCode(string $locale): string
     {
-        return str_replace('_', '-', $locale);
+        return LanguageCodes::target($locale);
     }
 
     /** "more" (formal), "less" (informal) or "" (Supertext's default). */
@@ -210,6 +215,7 @@ final class Settings
                 }
 
                 $entry = [];
+                $code  = $code !== '' ? LanguageCodes::normalize($code) : '';
 
                 if ($code !== '' && $code !== self::defaultLanguageCode($locale)) {
                     $entry['code'] = $code;
