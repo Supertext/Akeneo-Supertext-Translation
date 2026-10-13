@@ -5,4 +5,4 @@
 /CLAUDE.md export-ignore
 /phpstan.neon export-ignore
 /phpstan-baseline.neon export-ignore
-/bin export-ignore
+/scripts export-ignore

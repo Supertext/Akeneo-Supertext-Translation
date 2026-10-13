@@ -7,6 +7,10 @@ All notable changes to Supertext Translation for Akeneo PIM.
 ### Changed
 - Talks to Supertext through the [Supertext SDK for PHP](https://github.com/Supertext/Supertext-API-SDK-and-Guide) (bundled in `lib/supertext-sdk/` until it is on Packagist) instead of the bundle's own client. Same behaviour; error messages about the API key now include the links to the Supertext signup and API key pages, and an unsupported language pair gets its own message naming both codes.
 
+### Fixed
+- A target language Supertext doesn't know is now reported as an unsupported language pair, naming both codes (was: not found).
+- A Supertext language code with a variant under System → Supertext → Languages (e.g. `de_DE_formal`) is sent to Supertext as `de-DE`.
+
 ### Added
 - French and Italian interface (and German where it was missing): the dialog, System → Supertext and all messages from the server (Supertext errors, validation, permissions) follow the user's UI locale.
 - First version for Akeneo PIM Community Edition 2026 (tested with 2026.4).

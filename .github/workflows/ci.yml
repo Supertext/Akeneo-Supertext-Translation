@@ -23,7 +23,13 @@ jobs:
       - name: Unit tests
         run: phpunit
       - name: Bundled Supertext SDK matches its recorded commit
-        run: bin/update-supertext-sdk.sh --check
+        run: |
+          scripts/vendor-sdk.sh "$(cat lib/supertext-sdk/COMMIT)"
+          if [ -n "$(git status --porcelain -- lib/supertext-sdk)" ]; then
+            git status --short -- lib/supertext-sdk
+            echo "::error::lib/supertext-sdk differs from the SDK commit in lib/supertext-sdk/COMMIT: run scripts/vendor-sdk.sh <commit>"
+            exit 1
+          fi
 
   phpstan:
     name: PHPStan

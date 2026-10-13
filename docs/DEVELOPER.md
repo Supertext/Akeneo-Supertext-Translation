@@ -89,7 +89,6 @@ PHP changes need `rm -rf var/cache`; translation changes need `bin/console pim:i
 
 ```bash
 phpunit                                                     # unit tests (src/Api with the SDK, src/Translation/Planner, translation files)
-bin/update-supertext-sdk.sh --check                         # lib/supertext-sdk is the recorded SDK commit
 find src tests demo/project/supertext-demo -name '*.php' -print0 | xargs -0 -n1 php -l
 ```
 
@@ -99,10 +98,10 @@ The unit tests need only PHPUnit 11 (no Akeneo install). `tests/demo-check.sh` i
 
 ## Supertext SDK
 
-The bundle uses the [Supertext SDK for PHP](https://github.com/Supertext/Supertext-API-SDK-and-Guide/tree/main/sdk/php) for everything that talks to Supertext. The SDK isn't on Packagist yet, so `lib/supertext-sdk/` holds a copy of its `sdk/php/src` (namespace `Supertext\Sdk`, unchanged), mapped in the bundle's `composer.json` (`autoload.psr-4`). `lib/supertext-sdk/VERSION` records the SDK commit.
+The bundle uses the [Supertext SDK for PHP](https://github.com/Supertext/Supertext-API-SDK-and-Guide/tree/main/sdk/php) for everything that talks to Supertext. The SDK isn't on Packagist yet, so `lib/supertext-sdk/` holds a copy of its `sdk/php/src` and `autoload.php` (namespace `Supertext\Sdk`, unchanged), mapped in the bundle's `composer.json` (`autoload.psr-4`). `lib/supertext-sdk/COMMIT` records the SDK commit, `README.md` says where it comes from.
 
-- **Never edit `lib/supertext-sdk/` by hand.** Fix the SDK repository (all five SDKs, see its `CLAUDE.md`), then update the copy: `bin/update-supertext-sdk.sh <tag-or-commit>` (default `main`), run the tests and commit `lib/` together with any bundle changes.
-- CI checks that the copy matches the recorded commit (`bin/update-supertext-sdk.sh --check`).
+- **Never edit `lib/supertext-sdk/` by hand.** Fix the SDK repository (all five SDKs, see its `CLAUDE.md`), then update the copy: `scripts/vendor-sdk.sh [commit-or-branch]` (default `main`; `SDK_DIR=/path/to/clone scripts/vendor-sdk.sh` uses a local clone as it is). It replaces the folder entirely. Run the tests and commit `lib/` together with any bundle changes.
+- CI checks that the copy matches the recorded commit (it runs `scripts/vendor-sdk.sh` with the commit in `COMMIT` and fails if `lib/supertext-sdk/` changes).
 - Once the SDK is on Packagist: require `supertext/supertext-sdk`, delete `lib/` and the script, and remove the `Supertext\Sdk\` line from `autoload.psr-4`. No code changes are needed (same namespace).
 
 ## Demo (Railway)
