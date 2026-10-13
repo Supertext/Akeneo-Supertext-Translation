@@ -10,9 +10,8 @@ declare(strict_types=1);
 
 namespace Supertext\AkeneoTranslationBundle\Settings;
 
-use Supertext\AkeneoTranslationBundle\Api\CurlTransport;
-use Supertext\AkeneoTranslationBundle\Api\LanguageCodes;
 use Supertext\AkeneoTranslationBundle\Api\SupertextClient;
+use Supertext\Sdk\LanguageCodes;
 
 /**
  * The bundle's settings: what an administrator saved under System → Supertext, with the
@@ -111,13 +110,13 @@ final class Settings
     /** Supertext target code for an Akeneo locale: the configured code, else BCP-47 with a region (de_CH -> de-CH). */
     public function languageCode(string $locale): string
     {
-        return LanguageCodes::target($locale, (string) ($this->languages()[$locale]['code'] ?? ''));
+        return LanguageCodes::target($locale, [$locale => (string) ($this->languages()[$locale]['code'] ?? '')]);
     }
 
     /** Supertext source code for an Akeneo locale: the bare language of the configured code or the locale (en_US -> en). */
     public function sourceCode(string $locale): string
     {
-        return LanguageCodes::source($locale, (string) ($this->languages()[$locale]['code'] ?? ''));
+        return LanguageCodes::source($locale, [$locale => (string) ($this->languages()[$locale]['code'] ?? '')]);
     }
 
     public static function defaultLanguageCode(string $locale): string
@@ -143,7 +142,7 @@ final class Settings
 
     public function client(): SupertextClient
     {
-        return new SupertextClient($this->apiKey(), $this->baseUrl(), new CurlTransport(), $this->timeout());
+        return new SupertextClient($this->apiKey(), $this->baseUrl(), $this->timeout(), 'Akeneo-Supertext/' . (self::version() !== '' ? self::version() : 'dev'));
     }
 
     /**
@@ -208,7 +207,7 @@ final class Settings
                 $code       = trim((string) ($language['code'] ?? ''));
                 $politeness = (string) ($language['politeness'] ?? '');
 
-                if ($code !== '' && !preg_match('/^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$/', $code)) {
+                if ($code !== '' && !LanguageCodes::isValid($code)) {
                     $errors[] = ['key' => 'invalid_code', 'params' => ['code' => $code, 'locale' => $locale], 'message' => sprintf('"%s" is not a valid language code for %s (example: de-CH).', $code, $locale)];
 
                     continue;

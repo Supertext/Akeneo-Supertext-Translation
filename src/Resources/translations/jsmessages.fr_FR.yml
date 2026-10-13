@@ -47,6 +47,7 @@ supertext_translation:
         missing_url: Saisissez l'adresse de l'API pour un environnement personnalisé.
         invalid_timeout: Le délai d'attente doit être compris entre 30 et 1800 secondes.
         invalid_code: '« {{ code }} » n''est pas un code de langue valide pour {{ locale }} (exemple : de-CH).'
+        invalid_language_pair: 'Supertext ne prend pas en charge cette paire de langues ({{ source }} → {{ target }}). Vérifiez les codes de langue sous Système → Supertext.'
     modal:
         title: Traduire avec Supertext
         from: Traduire depuis

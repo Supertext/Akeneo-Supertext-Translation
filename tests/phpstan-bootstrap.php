@@ -11,3 +11,5 @@ if (!is_file($vendor . '/autoload.php')) {
     exit(1);
 }
 require $vendor . '/autoload.php';
+// The bundled Supertext SDK (lib/supertext-sdk), mapped in the bundle's composer.json.
+require dirname(__DIR__) . '/lib/supertext-sdk/autoload.php';

@@ -47,6 +47,7 @@ supertext_translation:
         missing_url: Enter the API address for a custom environment.
         invalid_timeout: The timeout must be between 30 and 1800 seconds.
         invalid_code: '"{{ code }}" is not a valid language code for {{ locale }} (example: de-CH).'
+        invalid_language_pair: 'Supertext does not support this language pair ({{ source }} → {{ target }}). Check the language codes under System → Supertext.'
     modal:
         title: Translate with Supertext
         from: Translate from

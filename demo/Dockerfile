@@ -35,6 +35,7 @@ RUN PUPPETEER_SKIP_DOWNLOAD=1 PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=1 CYPRESS_INSTALL
 FROM akeneo AS build
 COPY composer.json /srv/module/composer.json
 COPY src /srv/module/src
+COPY lib /srv/module/lib
 COPY demo/project/ /srv/pim/
 RUN composer config repositories.supertext '{"type": "path", "url": "/srv/module", "options": {"symlink": false, "versions": {"supertext/akeneo-supertext-translation": "dev-main"}}}' \
  && php -d memory_limit=-1 /usr/bin/composer require 'supertext/akeneo-supertext-translation:*@dev' --update-no-dev --no-interaction --no-progress --no-scripts \

@@ -5,152 +5,178 @@ namespace Supertext\AkeneoTranslationBundle\Tests\Unit;
 use PHPUnit\Framework\TestCase;
 use Supertext\AkeneoTranslationBundle\Api\SupertextClient;
 use Supertext\AkeneoTranslationBundle\Api\SupertextException;
+use Supertext\Sdk\Http\HttpRequest;
+use Supertext\Sdk\Http\HttpResponse;
+use Supertext\Sdk\Http\HttpTransport;
+use Supertext\Sdk\Segment;
 
+/**
+ * The bundle's layer over the Supertext SDK (lib/supertext-sdk): environments, key handling and
+ * the mapping of SDK errors to UI keys. The protocol itself is tested in the SDK repository.
+ */
 final class SupertextClientTest extends TestCase
 {
-    /** @var list<array{method: string, url: string, headers: array<string, string>, body: ?string}> */
-    private array $calls = [];
+    /** @var \ArrayObject<int, HttpRequest> */
+    private \ArrayObject $requests;
 
-    /** @param callable(string, string, ?string): array{status: int, body: string, headers?: array<string, string>} $handler */
+    protected function setUp(): void
+    {
+        $this->requests = new \ArrayObject();
+    }
+
+    /** @param callable(HttpRequest): HttpResponse $handler */
     private function client(callable $handler, string $key = 'test-key'): SupertextClient
     {
-        $transport = function (string $method, string $url, array $headers, ?string $body) use ($handler): array {
-            $this->calls[] = compact('method', 'url', 'headers', 'body');
+        $transport = new class ($handler, $this->requests) implements HttpTransport {
+            /** @param \ArrayObject<int, HttpRequest> $requests */
+            public function __construct(private $handler, private \ArrayObject $requests)
+            {
+            }
 
-            return $handler($method, $url, $body) + ['headers' => []];
+            public function send(HttpRequest $request): HttpResponse
+            {
+                $this->requests[] = $request;
+
+                return ($this->handler)($request);
+            }
         };
 
-        return new SupertextClient($key, 'https://api.test/v1', $transport, 10, 0.01, static function (): void {
+        return new SupertextClient($key, 'https://api.test/v1', 10, 'Akeneo-Supertext/test', $transport, 0.01, static function (): void {
         });
     }
 
-    public function testRunsTheFullProtocol(): void
+    private static function api(string $translation): callable
     {
-        $polls  = 0;
-        $client = $this->client(function (string $method, string $url) use (&$polls): array {
-            return match (true) {
-                $method === 'POST'                    => ['status' => 200, 'body' => '{"file_id":"f1"}'],
-                str_ends_with($url, '/status')        => ['status' => 200, 'body' => json_encode(['status' => ++$polls < 2 ? 'running' : 'done'])],
-                str_ends_with($url, '/translation')   => ['status' => 200, 'body' => '<div data-st-id="0">Hallo</div>'],
-                default                               => ['status' => 200, 'body' => '{}'],
-            };
-        });
+        return static fn (HttpRequest $r): HttpResponse => match (true) {
+            $r->method === 'POST'                    => new HttpResponse(200, '{"file_id":"f1"}'),
+            str_ends_with($r->url, '/status')        => new HttpResponse(200, '{"status":"done"}'),
+            str_ends_with($r->url, '/translation')   => new HttpResponse(200, $translation),
+            default                                  => new HttpResponse(200, '{}'),
+        };
+    }
 
-        $html = $client->translateDocument('<div data-st-id="0">Hello</div>', 'de-CH', 'en-GB', 'more');
+    public function testTranslatesTextsAndHtmlByKey(): void
+    {
+        $client = $this->client(self::api(
+            '<div data-st-id="0">Hallo &amp; willkommen<br>Zweite Zeile</div><div data-st-id="1"><p>Von <strong>Hand</strong></p></div>'
+        ));
 
-        self::assertStringContainsString('Hallo', $html);
-        self::assertSame(
-            ['POST translate/ai/file', 'GET translate/ai/file/f1/status', 'GET translate/ai/file/f1/status', 'GET translate/ai/file/f1/translation', 'DELETE translate/ai/file/f1'],
-            array_map(static fn (array $c): string => $c['method'] . ' ' . str_replace('https://api.test/v1/', '', $c['url']), $this->calls)
+        $result = $client->translateTexts(
+            [3 => Segment::text("Hello & welcome\nSecond line"), 7 => Segment::html('<p>By <strong>hand</strong></p>')],
+            'de-CH',
+            'en_US',
+            'more',
         );
 
-        $post = $this->calls[0];
-        self::assertSame('Supertext-Auth-Key test-key', $post['headers']['Authorization']);
-        self::assertStringStartsWith('multipart/form-data; boundary=', $post['headers']['Content-Type']);
-        self::assertStringContainsString("name=\"target_lang\"\r\n\r\nde-CH\r\n", $post['body']);
-        self::assertStringContainsString("name=\"source_lang\"\r\n\r\nen\r\n", $post['body']);
-        self::assertStringContainsString("name=\"politeness\"\r\n\r\nmore\r\n", $post['body']);
-        self::assertStringContainsString("filename=\"content.html\"\r\nContent-Type: text/html\r\n\r\n<div", $post['body']);
-    }
+        self::assertSame([3 => "Hallo & willkommen\nZweite Zeile", 7 => '<p>Von <strong>Hand</strong></p>'], $result);
+        self::assertSame(['POST', 'GET', 'GET', 'DELETE'], array_map(static fn (HttpRequest $r): string => $r->method, $this->requests->getArrayCopy()));
 
-    public function testSendsBareTargetsWithTheirDefaultRegion(): void
-    {
-        $client = $this->client(fn (string $method, string $url) => match (true) {
-            $method === 'POST'                  => ['status' => 200, 'body' => '{"file_id":"f1"}'],
-            str_ends_with($url, '/status')      => ['status' => 200, 'body' => '{"status":"done"}'],
-            str_ends_with($url, '/translation') => ['status' => 200, 'body' => '<div data-st-id="0">Hallo</div>'],
-            default                             => ['status' => 200, 'body' => '{}'],
-        });
-
-        $client->translateDocument('<div data-st-id="0">Hello</div>', 'de', 'en_US');
-
-        self::assertStringContainsString("name=\"target_lang\"\r\n\r\nde-DE\r\n", $this->calls[0]['body']);
-        self::assertStringContainsString("name=\"source_lang\"\r\n\r\nen\r\n", $this->calls[0]['body']);
+        $post = $this->requests[0];
+        self::assertSame('https://api.test/v1/translate/ai/file', $post->url);
+        self::assertSame('Supertext-Auth-Key test-key', $post->headers['Authorization']);
+        self::assertStringContainsString('Akeneo-Supertext/test', $post->headers['User-Agent']);
+        self::assertStringContainsString("name=\"target_lang\"\r\n\r\nde-CH\r\n", (string) $post->body);
+        self::assertStringContainsString("name=\"source_lang\"\r\n\r\nen\r\n", (string) $post->body);
+        self::assertStringContainsString("name=\"politeness\"\r\n\r\nmore\r\n", (string) $post->body);
     }
 
     public function testAcceptsTheKeyWithItsPrefix(): void
     {
-        $client = $this->client(fn () => ['status' => 200, 'body' => '{}'], '  Supertext-Auth-Key abc+/= ');
+        $client = $this->client(self::api(''), '  Supertext-Auth-Key abc+/= ');
         $client->validateApiKey();
 
-        self::assertSame('Supertext-Auth-Key abc+/=', $this->calls[0]['headers']['Authorization']);
+        self::assertTrue($client->hasApiKey());
+        self::assertSame('Supertext-Auth-Key abc+/=', $this->requests[0]->headers['Authorization']);
+        self::assertSame('abc', SupertextClient::normalizeKey('Supertext-Auth-Key abc'));
+        self::assertSame('', SupertextClient::normalizeKey('Supertext-Auth-Key '));
     }
 
-    public function testRetriesWhenRateLimited(): void
+    public function testMapsSdkErrorsToUiKeys(): void
     {
-        $limited = 2;
-        $client  = $this->client(function () use (&$limited): array {
-            return $limited-- > 0 ? ['status' => 429, 'body' => 'slow down'] : ['status' => 200, 'body' => '{}'];
-        });
-        $client->validateApiKey();
+        $cases = [
+            'auth_failed'           => new HttpResponse(401, 'Unauthorized'),
+            'invalid_language_pair' => new HttpResponse(400, '{"error_code":"INVALID_LANGUAGE_PAIR","source_lang":"en","target_lang":"xx"}'),
+            'unavailable'           => new HttpResponse(503, ''),
+            'http_status'           => new HttpResponse(418, ''),
+        ];
 
-        self::assertCount(3, $this->calls);
-    }
-
-    public function testGivesUpAfterFourRetries(): void
-    {
-        $client = $this->client(fn () => ['status' => 429, 'body' => 'slow down']);
-
-        try {
-            $client->validateApiKey();
-            self::fail('Expected an exception');
-        } catch (SupertextException $e) {
-            self::assertStringContainsString('Too many requests', $e->getMessage());
-            self::assertSame('rate_limited', $e->key);
+        foreach ($cases as $key => $response) {
+            try {
+                $this->client(static fn (): HttpResponse => $response)->validateApiKey();
+                self::fail('No exception for ' . $key);
+            } catch (SupertextException $e) {
+                self::assertSame($key, $e->key);
+                self::assertSame($response->status, $e->params['status']);
+            }
         }
 
-        self::assertCount(5, $this->calls);
+        try {
+            $this->client(static fn (): HttpResponse => new HttpResponse(400, '{"error_code":"INVALID_LANGUAGE_PAIR","source_lang":"en","target_lang":"xx"}'))->validateApiKey();
+        } catch (SupertextException $e) {
+            self::assertSame(['status' => 400, 'source' => 'en', 'target' => 'xx'], $e->params);
+        }
     }
 
-    public function testHonoursRetryAfter(): void
+    public function testAuthenticationErrorsLinkToTheApiKeyPage(): void
     {
-        self::assertSame(3.0, SupertextClient::retryDelay(0, '3'));
-        self::assertGreaterThanOrEqual(2.0, SupertextClient::retryDelay(1));
-    }
-
-    public function testExplainsAuthenticationErrors(): void
-    {
-        $client = $this->client(fn () => ['status' => 401, 'body' => '{"detail":"bad key"}']);
-
-        $this->expectException(SupertextException::class);
-        $this->expectExceptionMessageMatches('/Authentication failed.*bad key/');
-        $client->translateDocument('<p>x</p>', 'fr-FR');
+        try {
+            $this->client(static fn (): HttpResponse => new HttpResponse(403, ''))->validateApiKey();
+            self::fail('No exception');
+        } catch (SupertextException $e) {
+            self::assertStringContainsString('https://www.supertext.com/en/integrations/api', $e->getMessage());
+            self::assertStringNotContainsString('test-key', $e->getMessage());
+        }
     }
 
     public function testStopsOnLimitExceededAndCleansUp(): void
     {
-        $client = $this->client(function (string $method, string $url): array {
-            return match (true) {
-                $method === 'POST'             => ['status' => 200, 'body' => '{"file_id":"f2"}'],
-                str_ends_with($url, '/status') => ['status' => 200, 'body' => '{"status":"limit_exceeded"}'],
-                default                        => ['status' => 200, 'body' => '{}'],
-            };
+        $client = $this->client(static fn (HttpRequest $r): HttpResponse => match (true) {
+            $r->method === 'POST'             => new HttpResponse(200, '{"file_id":"f1"}'),
+            str_ends_with($r->url, '/status') => new HttpResponse(200, '{"status":"limit_exceeded"}'),
+            default                           => new HttpResponse(200, '{}'),
         });
 
         try {
-            $client->translateDocument('<p>x</p>', 'fr-FR');
-            self::fail('Expected an exception');
+            $client->translateTexts([Segment::text('Hello')], 'de-CH');
+            self::fail('No exception');
         } catch (SupertextException $e) {
-            self::assertStringContainsString('limit is exceeded', $e->getMessage());
             self::assertSame('limit_exceeded', $e->key);
         }
 
-        self::assertSame('DELETE', end($this->calls)['method']);
+        $all = $this->requests->getArrayCopy();
+        self::assertSame('DELETE', end($all)->method);
     }
 
     public function testRefusesToRunWithoutKey(): void
     {
-        $client = $this->client(fn () => ['status' => 200, 'body' => '{}'], '');
+        $client = $this->client(self::api(''), '   ');
 
         self::assertFalse($client->hasApiKey());
-        $this->expectException(SupertextException::class);
-        $client->validateApiKey();
+
+        try {
+            $client->translateTexts([Segment::text('Hello')], 'de-CH');
+            self::fail('No exception');
+        } catch (SupertextException $e) {
+            self::assertSame('no_api_key', $e->key);
+        }
+
+        self::assertCount(0, $this->requests);
     }
 
     public function testEnvironments(): void
     {
         self::assertSame(SupertextClient::LIVE, SupertextClient::baseUrlFor('live'));
         self::assertSame(SupertextClient::STAGING, SupertextClient::baseUrlFor('staging'));
-        self::assertSame('http://127.0.0.1:8765/v1/', SupertextClient::baseUrlFor('live', 'http://127.0.0.1:8765/v1/'));
+        self::assertSame(SupertextClient::TESTING, SupertextClient::baseUrlFor('testing'));
+        self::assertSame('https://example.test/v1/', SupertextClient::baseUrlFor('custom', ' https://example.test/v1/ '));
+    }
+
+    public function testEveryUiKeyExistsInTheTranslations(): void
+    {
+        $messages = (string) file_get_contents(__DIR__ . '/../../src/Resources/translations/jsmessages.en_US.yml');
+
+        foreach (SupertextException::SDK_KEYS as $key) {
+            self::assertMatchesRegularExpression('/^        ' . preg_quote($key, '/') . ':/m', $messages, $key);
+        }
     }
 }

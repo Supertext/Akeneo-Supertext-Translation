@@ -12,7 +12,6 @@ namespace Supertext\AkeneoTranslationBundle\Controller;
 
 use Akeneo\UserManagement\Bundle\Context\UserContext;
 use Oro\Bundle\SecurityBundle\SecurityFacade;
-use Supertext\AkeneoTranslationBundle\Api\CurlTransport;
 use Supertext\AkeneoTranslationBundle\Api\SupertextClient;
 use Supertext\AkeneoTranslationBundle\Api\SupertextException;
 use Supertext\AkeneoTranslationBundle\Settings\Settings;
@@ -83,7 +82,7 @@ final class SettingsController
         }
 
         try {
-            (new SupertextClient($key, $url, new CurlTransport(30), 30))->validateApiKey();
+            (new SupertextClient($key, $url, 30))->validateApiKey();
         } catch (SupertextException $e) {
             return new JsonResponse(['ok' => false] + $e->toArray(), Response::HTTP_OK);
         }

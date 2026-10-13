@@ -8,9 +8,9 @@ A Symfony bundle for Akeneo PIM Community Edition 2026 (Symfony 5.4, PHP 8.3). C
 
 | Path | Purpose |
 | --- | --- |
-| `src/Api/SupertextClient.php` | Supertext AI file translation API v1: submit, poll, download, delete; key check; HTTP 429 retries. No Akeneo classes. |
-| `src/Api/HtmlDocument.php` | Packs values into one HTML document (`<div data-st-id="N">` per value) and splits the translation apart; chunks below the API's size limit. |
-| `src/Api/CurlTransport.php` | HTTP for the client with PHP's curl extension. |
+| `lib/supertext-sdk/` | The [Supertext SDK for PHP](https://github.com/Supertext/Supertext-API-SDK-and-Guide/tree/main/sdk/php), copied (see *Supertext SDK*): the API protocol (upload, polling, download, delete), packing values into HTML documents, language codes, HTTP 429 retries, curl transport. Namespace `Supertext\Sdk`. |
+| `src/Api/SupertextClient.php` | The bundle's layer over the SDK: environments (Live, Staging, Testing, custom), key normalization, `translateTexts()` and `validateApiKey()`. No Akeneo classes. |
+| `src/Api/SupertextException.php` | Errors with the UI key (`supertext_translation.error.<key>`); `fromSdk()` maps the SDK's error codes to the keys. |
 | `src/Settings/Settings.php`, `SettingsRepository.php` | Settings from System → Supertext (one JSON row in `pim_configuration`, code `supertext_translation`), with `SUPERTEXT_API_KEY` and `SUPERTEXT_API_URL` taking precedence. |
 | `src/Translation/Planner.php`, `TextUnit.php` | Which source values go into which target locale (channels, locale-specific attributes, existing text). No Akeneo classes. |
 | `src/Translation/EntityTranslator.php` | Collects a product's or product model's text values, translates them per target locale and applies them with Akeneo's updater, validator and saver. |
@@ -53,7 +53,9 @@ Shared with the WordPress plugin and every other Supertext plugin:
 
 Auth header: `Authorization: Supertext-Auth-Key <key>`. The header name must be `Authorization` (`Authentication` gets 403). Supertext shows the key with the prefix, so the client strips a pasted `Supertext-Auth-Key ` and always sends exactly one. Base URLs: `https://api.supertext.com/v1/` (live), `https://api.staging.supertext.com/v1/`, `https://api.testing.supertext.com/v1/`. `GET features` is the cost-free key check (*Test connection*, `supertext:check`).
 
-**Rate limit:** the API limits requests per second per key (HTTP 429). The client retries a 429 up to 4 times, waiting for `Retry-After` if sent, otherwise 1, 2, 4 and 8 seconds plus jitter. Target locales are translated one after the other.
+**Rate limit:** the API limits requests per second per key (HTTP 429). The SDK retries a 429 up to 4 times, waiting for `Retry-After` if sent, otherwise 1, 2, 4 and 8 seconds plus jitter. Target locales are translated one after the other.
+
+The protocol, the HTML packing (one `<div data-st-id="N">` per value: plain text escaped with line breaks as `<br>`, rich text as is; documents below 900,000 characters) and the error codes are the SDK's; see its [integration guide](https://github.com/Supertext/Supertext-API-SDK-and-Guide/blob/main/docs/integration-guide.md).
 
 Locale codes: an Akeneo locale (`de_CH`) is sent as `de-CH` unless System → Supertext sets another code. The source is sent as its primary subtag (`en`).
 
@@ -61,7 +63,7 @@ Locale codes: an Akeneo locale (`de_CH`) is sent as `de-CH` unless System → Su
 
 Supertext wants the **source as a bare language** (`en`, `de`, `fr`) and the **target as a regional code** (`de-DE`, `fr-CH`, `en-US`). A bare target such as `de`, or a regional source such as `en-US`, is rejected with `INVALID_LANGUAGE_PAIR`. Translating within one language (`en` → `en-GB`) is allowed.
 
-`src/Api/LanguageCodes.php` (no CMS dependency, `tests/unit/LanguageCodesTest.php`) turns locales into the codes sent:
+The SDK's `Supertext\Sdk\LanguageCodes` (tested in the SDK repository against its shared test vectors) turns locales into the codes sent:
 
 - **Source:** the bare language of the source locale's *Supertext language code* (System → Supertext → Languages), else of the locale (`en_US` → `en`).
 - **Target:** the target locale's *Supertext language code* if set (normalized when saved and sent: `de_ch` → `de-CH`), else the Akeneo locale. Akeneo locales always carry a region (`de_CH` → `de-CH`). Either way, a code with a region keeps it, normalized (`de_CH`/`de-ch` → `de-CH`; scripts and numeric regions such as `zh-Hant`, `es-419` keep their form); a bare language gets its default region: ar→ar-SA, bg→bg-BG, cs→cs-CZ, da→da-DK, de→de-DE, el→el-GR, en→en-US, es→es-ES, et→et-EE, fi→fi-FI, fr→fr-FR, hr→hr-HR, hu→hu-HU, it→it-IT, ja→ja-JP, ko→ko-KR, lt→lt-LT, lv→lv-LV, nb→nb-NO, nl→nl-NL, pl→pl-PL, pt→pt-PT, ro→ro-RO, ru→ru-RU, sk→sk-SK, sl→sl-SI, sr→sr-RS, sv→sv-SE, th→th-TH, tr→tr-TR, uk→uk-UA, vi→vi-VN, zh→zh-CN (same table as the other Supertext plugins). Unknown bare codes are sent unchanged, so Supertext's error names them.
@@ -86,13 +88,22 @@ PHP changes need `rm -rf var/cache`; translation changes need `bin/console pim:i
 ## Tests
 
 ```bash
-phpunit                                                     # unit tests (src/Api, src/Translation/Planner, translation files)
+phpunit                                                     # unit tests (src/Api with the SDK, src/Translation/Planner, translation files)
+bin/update-supertext-sdk.sh --check                         # lib/supertext-sdk is the recorded SDK commit
 find src tests demo/project/supertext-demo -name '*.php' -print0 | xargs -0 -n1 php -l
 ```
 
 The unit tests need only PHPUnit 11 (no Akeneo install). `tests/demo-check.sh` is the end-to-end test: it starts the demo image twice against MySQL and Elasticsearch with the stand-in API, checks the demo accounts (created once, passwords never logged), and translates the sample product and product model with `supertext:translate`, checking the stored values.
 
 **CI** (`.github/workflows/ci.yml`): lint and unit tests on every push; the `phpstan` job runs PHPStan (see *Code quality and security checks*); the `demo` job builds the demo image (about 20 minutes: Composer, Yarn and Akeneo's webpack build) and runs `tests/demo-check.sh` against MySQL 8.4 and Elasticsearch 8.17 service containers.
+
+## Supertext SDK
+
+The bundle uses the [Supertext SDK for PHP](https://github.com/Supertext/Supertext-API-SDK-and-Guide/tree/main/sdk/php) for everything that talks to Supertext. The SDK isn't on Packagist yet, so `lib/supertext-sdk/` holds a copy of its `sdk/php/src` (namespace `Supertext\Sdk`, unchanged), mapped in the bundle's `composer.json` (`autoload.psr-4`). `lib/supertext-sdk/VERSION` records the SDK commit.
+
+- **Never edit `lib/supertext-sdk/` by hand.** Fix the SDK repository (all five SDKs, see its `CLAUDE.md`), then update the copy: `bin/update-supertext-sdk.sh <tag-or-commit>` (default `main`), run the tests and commit `lib/` together with any bundle changes.
+- CI checks that the copy matches the recorded commit (`bin/update-supertext-sdk.sh --check`).
+- Once the SDK is on Packagist: require `supertext/supertext-sdk`, delete `lib/` and the script, and remove the `Supertext\Sdk\` line from `autoload.psr-4`. No code changes are needed (same namespace).
 
 ## Demo (Railway)
 
@@ -184,6 +195,7 @@ Planned: submit the package to Packagist.
 ## Conventions
 
 - PSR-12, PHP 8.3, strict types; keep `src/Api/` and `src/Translation/Planner.php` free of Akeneo classes (the unit tests run without Akeneo).
+- Supertext protocol changes go into the SDK repository, never into `lib/supertext-sdk/` (see *Supertext SDK*).
 - New settings: `src/Settings/Settings.php` (`update()` validates), `SettingsController::payload()`, `settings/SettingsPage.tsx`, all four `jsmessages` files **and** the settings table in [INSTALLATION.md](INSTALLATION.md#settings).
 - UI strings in `jsmessages.en_US.yml`, `jsmessages.de_DE.yml`, `jsmessages.fr_FR.yml` and `jsmessages.it_IT.yml`: every new string in all four (formal address: Sie, vous, Lei; Akeneo's own terms in each language, e.g. fr *locale*, *canal*, *modèle de produit*, it *impostazione locale*, *canale*, *modello di prodotto*; never translate "Supertext", placeholders or URLs). Quote YAML values that contain a colon followed by a space (French: a no-break space before `?` and `:`). New server messages get a `key` with an `error.*` text in all four files.
 - The bundle name, the route names and the form extension codes are part of users' installations; renaming them is a breaking change.

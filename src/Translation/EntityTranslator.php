@@ -21,9 +21,10 @@ use Akeneo\Tool\Component\StorageUtils\Saver\SaverInterface;
 use Akeneo\Tool\Component\StorageUtils\Updater\ObjectUpdaterInterface;
 use Psr\Log\LoggerInterface;
 use Psr\Log\NullLogger;
-use Supertext\AkeneoTranslationBundle\Api\HtmlDocument;
+use Supertext\AkeneoTranslationBundle\Api\SupertextClient;
 use Supertext\AkeneoTranslationBundle\Api\SupertextException;
 use Supertext\AkeneoTranslationBundle\Settings\Settings;
+use Supertext\Sdk\Segment;
 use Symfony\Component\Validator\ConstraintViolationInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 
@@ -263,29 +264,20 @@ final class EntityTranslator
      *
      * @return array<int, string> unit index => translated text
      */
-    private function translateUnits(\Supertext\AkeneoTranslationBundle\Api\SupertextClient $client, array $units, string $source, string $target): array
+    private function translateUnits(SupertextClient $client, array $units, string $source, string $target): array
     {
         $segments = [];
-        $isHtml   = [];
 
         foreach ($units as $index => $unit) {
-            $segments[$index] = ['text' => $unit->text, 'html' => $unit->html];
-            $isHtml[$index]   = $unit->html;
+            $segments[$index] = $unit->html ? Segment::html($unit->text) : Segment::text($unit->text);
         }
 
-        $translations = [];
-
-        foreach (HtmlDocument::chunks($segments) as $chunk) {
-            $html = $client->translateDocument(
-                HtmlDocument::build($chunk),
-                $this->settings->languageCode($target),
-                $this->settings->sourceCode($source),
-                $this->settings->politeness($target) ?: 'default',
-            );
-            $translations += HtmlDocument::parse($html, $isHtml);
-        }
-
-        return $translations;
+        return $client->translateTexts(
+            $segments,
+            $this->settings->languageCode($target),
+            $this->settings->sourceCode($source),
+            $this->settings->politeness($target) ?: 'default',
+        );
     }
 
     /** @return callable(string, ?string, string): bool */

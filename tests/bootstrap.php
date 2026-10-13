@@ -1,10 +1,12 @@
 <?php
 
-// The unit tests cover src/Api and src/Translation/Planner.php, which have no Akeneo
+// The unit tests cover src/Api (with the bundled Supertext SDK) and src/Translation/Planner.php, which have no Akeneo
 // dependencies: they run with only PHPUnit available (no `composer install` of Akeneo needed).
 if (is_file(__DIR__ . '/../vendor/autoload.php')) {
     require __DIR__ . '/../vendor/autoload.php';
 }
+
+require __DIR__ . '/../lib/supertext-sdk/autoload.php';
 
 spl_autoload_register(static function (string $class): void {
     foreach (['Supertext\\AkeneoTranslationBundle\\Tests\\' => __DIR__ . '/', 'Supertext\\AkeneoTranslationBundle\\' => __DIR__ . '/../src/'] as $prefix => $dir) {
