@@ -177,7 +177,7 @@ It runs in the Railway project `supertext-cms-demos-php`, region EU West (Amster
 docker network create akeneo
 docker run -d --name mysql --network akeneo -e MYSQL_ROOT_PASSWORD=root mysql:8.4
 docker run -d --name elasticsearch --network akeneo -e discovery.type=single-node -e xpack.security.enabled=false \
-  -e indices.id_field_data.enabled=true -e ES_JAVA_OPTS="-Xms512m -Xmx512m" docker.elastic.co/elasticsearch/elasticsearch:8.17.0
+  -e indices.id_field_data.enabled=true -e ES_JAVA_OPTS="-Xms512m -Xmx512m" docker.elastic.co/elasticsearch/elasticsearch:8.17.10
 docker build -f demo/Dockerfile -t supertext-akeneo-demo .
 docker run --rm --name demo --network akeneo -p 8080:8080 \
   -e MYSQL_URL=mysql://root:root@mysql:3306/railway -e APP_INDEX_HOSTS=elasticsearch:9200 -e APP_SECRET=dev \
