@@ -24,7 +24,7 @@ use Psr\Log\NullLogger;
 use Supertext\AkeneoTranslationBundle\Api\SupertextClient;
 use Supertext\AkeneoTranslationBundle\Api\SupertextException;
 use Supertext\AkeneoTranslationBundle\Settings\Settings;
-use Supertext\Sdk\Segment;
+use Supertext\Sdk\V1\Segment;
 use Symfony\Component\Validator\ConstraintViolationInterface;
 use Symfony\Component\Validator\Validator\ValidatorInterface;
 

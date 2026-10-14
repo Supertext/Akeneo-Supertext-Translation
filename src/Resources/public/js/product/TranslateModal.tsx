@@ -94,10 +94,10 @@ const TranslateModal = ({type, id, onClose, onTranslated}: Props) => {
         if (cancelled) return;
         setContext(data);
         if (source === '') setSource(data.source);
-        // Preselect the languages without their own text yet.
+        // Preselect the languages without their own text yet (and with a Supertext language).
         setTargets(
           Object.entries(data.preview.targets)
-            .filter(([, preview]) => preview.translate > 0)
+            .filter(([code, preview]) => preview.translate > 0 && !data.unmapped.includes(code))
             .map(([code]) => code)
         );
         setError(null);
@@ -181,7 +181,8 @@ const TranslateModal = ({type, id, onClose, onTranslated}: Props) => {
                     .filter(locale => locale.code !== source)
                     .map(locale => {
                       const preview = context.preview.targets[locale.code];
-                      const available = preview !== undefined && preview.translate + preview.existing > 0;
+                      const unmapped = context.unmapped.includes(locale.code);
+                      const available = !unmapped && preview !== undefined && preview.translate + preview.existing > 0;
                       return (
                         <TargetRow key={locale.code}>
                           <Checkbox
@@ -191,8 +192,10 @@ const TranslateModal = ({type, id, onClose, onTranslated}: Props) => {
                           >
                             <Locale code={locale.code} languageLabel={locale.label} />
                           </Checkbox>
-                          <Hint $warning={available && preview.existing > 0}>
-                            {!available
+                          <Hint $warning={unmapped || (available && preview.existing > 0)}>
+                            {unmapped
+                              ? __('supertext_translation.modal.unmapped')
+                              : !available
                               ? __('supertext_translation.modal.not_in_channel')
                               : preview.existing > 0
                               ? __('supertext_translation.modal.existing', {count: preview.existing})

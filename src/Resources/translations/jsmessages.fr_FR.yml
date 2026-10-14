@@ -24,7 +24,6 @@ supertext_translation:
         entity_not_found: Introuvable.
         forbidden_settings: Vous n'êtes pas autorisé à modifier la configuration système.
         no_api_key: Aucune clé API Supertext n'est configurée.
-        connected: Connecté à {{ url }}.
         unreachable: Le service Supertext est injoignable.
         auth_failed: L'authentification a échoué. Vérifiez la clé API Supertext.
         not_found: La ressource Supertext demandée est introuvable.
@@ -46,8 +45,17 @@ supertext_translation:
         invalid_url: L'adresse de l'API doit commencer par https://.
         missing_url: Saisissez l'adresse de l'API pour un environnement personnalisé.
         invalid_timeout: Le délai d'attente doit être compris entre 30 et 1800 secondes.
-        invalid_code: '« {{ code }} » n''est pas un code de langue valide pour {{ locale }} (exemple : de-CH).'
-        invalid_language_pair: 'Supertext ne prend pas en charge cette paire de langues ({{ source }} → {{ target }}). Vérifiez les codes de langue sous Système → Supertext.'
+        invalid_code: '« {{ code }} » n’est pas une langue Supertext valide pour {{ locale }} (exemples : de-CH, es).'
+        invalid_language_pair: 'Supertext ne prend pas en charge cette paire de langues ({{ source }} → {{ target }}). Vérifiez l’association des langues sous Système → Supertext.'
+        unsupported_language: 'La langue {{ language }} n’est encore associée à aucune langue Supertext. Demandez à votre administrateur de l’associer sous Système → Supertext (Langues).'
+        unsupported_feature: 'Supertext ne propose pas de ton formel ou informel pour cette langue. Choisissez la forme d’adresse Par défaut sous Système → Supertext (Langues).'
+    keycheck:
+        ok: 'Clé API vérifiée : la connexion à Supertext fonctionne.'
+        invalid: 'Supertext a refusé la clé API. Vérifiez que vous avez copié la clé entière ou générez-en une nouvelle sur supertext.com → Integrations → API (rôle Admin requis). Pas encore de compte Supertext ? Créez-en un sur supertext.com.'
+        missing: 'Aucune clé API n''est encore saisie. Pas encore de compte Supertext ? Créez-en un sur supertext.com. Générez votre clé API sur supertext.com → Integrations → API (rôle Admin requis).'
+        unreachable: 'La clé API n''a pas pu être vérifiée, car Supertext n''est pas joignable. Les paramètres sont enregistrés ; réessayez plus tard.'
+        error: 'La clé API n''a pas pu être vérifiée : Supertext a répondu par une erreur ({{ status }}). Les paramètres sont enregistrés ; réessayez plus tard.'
+        checked_at: '(Vérifiée le {{ time }})'
     modal:
         title: Traduire avec Supertext
         from: Traduire depuis
@@ -57,6 +65,7 @@ supertext_translation:
         not_in_channel: Non utilisée par les canaux de ces valeurs
         existing: A déjà son propre texte ({{ count }} valeurs)
         to_translate: '{{ count }} valeurs à traduire'
+        unmapped: 'Aucune langue Supertext : un administrateur peut associer cette locale sous Système → Supertext.'
         overwrite: Écraser les traductions existantes
         overwrite_warning: 'Le texte existant est remplacé en : {{ languages }}. L''onglet Historique conserve le texte précédent.'
         translate: Traduire
@@ -84,14 +93,20 @@ supertext_translation:
         url_from_environment: Définie par la variable d'environnement SUPERTEXT_API_URL ({{ url }}).
         timeout: Délai d'attente (secondes)
         timeout_help: Durée d'attente maximale pour une langue (30 à 1800).
+        version_reports: 'Envoyer les informations de version à Supertext'
+        version_reports_help: 'Envoie à Supertext l''URL du site ainsi que les versions de ce plugin, du PIM et de l''environnement d''exécution lorsque vous enregistrez ces paramètres et après une mise à jour. Le support Supertext voit ainsi quelle version vous utilisez. Aucun contenu, aucune clé API et aucune donnée personnelle ne sont transmis.'
+        version_reports_environment: 'La variable d’environnement SUPERTEXT_VERSION_REPORTS est définie sur ce serveur et a la priorité.'
         languages: Langues
-        languages_help: Chaque locale est envoyée à Supertext avec son code de langue (en_US devient en-US). Remplacez le code ou choisissez la forme d'adresse si nécessaire.
+        languages_help: 'Choisissez la langue Supertext de chaque locale. Les locales qui correspondent à une langue Supertext sont préremplies (de_CH → de-CH) ; les autres en nécessitent une (es_ES → es, nl_NL → nl), sinon elles ne peuvent pas être traduites.'
         locale: Locale
-        code: Code de langue Supertext
+        code: 'Langue Supertext'
         politeness: Forme d'adresse
         politeness_default: Par défaut
         politeness_more: Formelle (vous)
         politeness_less: Informelle (tu)
+        choose_code: 'Choisir une langue Supertext'
+        not_mapped: 'Non associée : choisissez une langue Supertext'
+        no_politeness: 'Supertext ne propose pas de choix formel/informel pour cette langue'
         test: Tester la connexion
         saved: Paramètres enregistrés.
         version: Supertext Translation pour Akeneo PIM, version

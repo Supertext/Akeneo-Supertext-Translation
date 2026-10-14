@@ -8,7 +8,7 @@ use Supertext\AkeneoTranslationBundle\Api\SupertextException;
 use Supertext\Sdk\Http\HttpRequest;
 use Supertext\Sdk\Http\HttpResponse;
 use Supertext\Sdk\Http\HttpTransport;
-use Supertext\Sdk\Segment;
+use Supertext\Sdk\V1\Segment;
 
 /**
  * The bundle's layer over the Supertext SDK (lib/supertext-sdk): environments, key handling and
@@ -64,7 +64,7 @@ final class SupertextClientTest extends TestCase
         $result = $client->translateTexts(
             [3 => Segment::text("Hello & welcome\nSecond line"), 7 => Segment::html('<p>By <strong>hand</strong></p>')],
             'de-CH',
-            'en_US',
+            'en',
             'more',
         );
 
@@ -114,6 +114,18 @@ final class SupertextClientTest extends TestCase
             $this->client(static fn (): HttpResponse => new HttpResponse(400, '{"error_code":"INVALID_LANGUAGE_PAIR","source_lang":"en","target_lang":"xx"}'))->validateApiKey();
         } catch (SupertextException $e) {
             self::assertSame(['status' => 400, 'source' => 'en', 'target' => 'xx'], $e->params);
+        }
+    }
+
+    public function testPolitenessATargetDoesNotOfferIsUnsupportedFeature(): void
+    {
+        $client = $this->client(static fn (HttpRequest $r): HttpResponse => new HttpResponse(400, '{"error_code":"FEATURE_ERROR","feature":"politeness"}'));
+
+        try {
+            $client->translateTexts([Segment::text('Hello')], 'en-US', 'de', 'more');
+            self::fail('No exception');
+        } catch (SupertextException $e) {
+            self::assertSame('unsupported_feature', $e->key);
         }
     }
 

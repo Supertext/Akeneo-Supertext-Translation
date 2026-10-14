@@ -63,7 +63,7 @@ sed -ri "s/<VirtualHost \*:[0-9]+>/<VirtualHost *:${PORT:-8080}>/" /etc/apache2/
 echo "ServerName localhost" > /etc/apache2/conf-enabled/servername.conf
 # Apache's PHP sees the same settings as the console.
 for v in APP_ENV APP_DEBUG APP_SECRET APP_DATABASE_HOST APP_DATABASE_PORT APP_DATABASE_USER APP_DATABASE_PASSWORD APP_DATABASE_NAME \
-  APP_INDEX_HOSTS APP_PRODUCT_AND_PRODUCT_MODEL_INDEX_NAME AKENEO_PIM_URL SUPERTEXT_API_KEY SUPERTEXT_API_URL; do
+  APP_INDEX_HOSTS APP_PRODUCT_AND_PRODUCT_MODEL_INDEX_NAME AKENEO_PIM_URL SUPERTEXT_API_KEY SUPERTEXT_API_URL SUPERTEXT_VERSION_REPORTS SUPERTEXT_REPORT_URL; do
   if [ -n "${!v:-}" ]; then printf 'PassEnv %s\n' "$v"; fi
 done > /etc/apache2/conf-enabled/akeneo-env.conf
 echo "[demo] Starting Apache on port ${PORT:-8080} (${AKENEO_PIM_URL})."

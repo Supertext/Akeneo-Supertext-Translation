@@ -18,6 +18,7 @@ use Oro\Bundle\SecurityBundle\SecurityFacade;
 use Psr\Log\LoggerInterface;
 use Ramsey\Uuid\Uuid;
 use Supertext\AkeneoTranslationBundle\Api\SupertextException;
+use Supertext\AkeneoTranslationBundle\Reporting\Reporting;
 use Supertext\AkeneoTranslationBundle\Settings\Settings;
 use Supertext\AkeneoTranslationBundle\Translation\EntityTranslator;
 use Symfony\Component\HttpFoundation\JsonResponse;
@@ -43,6 +44,7 @@ final class TranslateController
         private readonly SecurityFacade $securityFacade,
         private readonly UserContext $userContext,
         private readonly LoggerInterface $logger,
+        private readonly Reporting $reporting,
     ) {
     }
 
@@ -54,6 +56,8 @@ final class TranslateController
         if ($entity instanceof JsonResponse) {
             return $entity;
         }
+
+        $this->reporting->defer(Reporting::ON_REQUEST, self::siteUrl($request));
 
         $locales = $this->translator->activatedLocales();
         $source  = (string) $request->query->get('from', '');
@@ -79,6 +83,8 @@ final class TranslateController
             'configured' => $this->settings->apiKey() !== '',
             'links'      => ['signup' => Settings::SIGNUP_URL, 'api_key' => Settings::API_KEY_URL],
             'source'     => $source,
+            // Locales without a Supertext language (no mapping, no exact match): nothing can be sent for them.
+            'unmapped'   => array_values(array_filter($locales, fn (string $locale): bool => $this->settings->languageCodeOrNull($locale) === null)),
             // A variant's texts usually live on its product model (they are translated there).
             'variant'    => $entity instanceof EntityWithFamilyVariantInterface && $entity->getParent() !== null,
             'locales'    => $labels,
@@ -94,6 +100,9 @@ final class TranslateController
         if ($entity instanceof JsonResponse) {
             return $entity;
         }
+
+        $siteUrl = self::siteUrl($request);
+        $this->reporting->defer(Reporting::ON_REQUEST, $siteUrl);
 
         $input   = json_decode($request->getContent(), true);
         $locales = $this->translator->activatedLocales();
@@ -122,7 +131,15 @@ final class TranslateController
             return new JsonResponse(['message' => 'The translation could not be saved. See the application log for details.', 'key' => 'save_failed'], Response::HTTP_INTERNAL_SERVER_ERROR);
         }
 
+        // Supertext rejected the key (401/403): the stored key check becomes "invalid" (reported if it changed).
+        $this->reporting->deferAfterTranslation($siteUrl, $results);
+
         return new JsonResponse(['results' => $results]);
+    }
+
+    private static function siteUrl(Request $request): ?string
+    {
+        return Settings::siteUrl($request->getSchemeAndHttpHost() . $request->getBasePath());
     }
 
     private function entity(string $type, string $id): EntityWithValuesInterface|JsonResponse

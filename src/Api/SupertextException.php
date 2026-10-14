@@ -8,7 +8,7 @@
 
 namespace Supertext\AkeneoTranslationBundle\Api;
 
-use Supertext\Sdk\SupertextException as SdkException;
+use Supertext\Sdk\V1\SupertextException as SdkException;
 
 /**
  * Any failure talking to Supertext. The message (English, for logs and the console) is safe to
@@ -35,6 +35,8 @@ final class SupertextException extends \RuntimeException
         SdkException::MISSING_API_KEY        => 'no_api_key',
         SdkException::AUTHENTICATION_FAILURE => 'auth_failed',
         SdkException::INVALID_LANGUAGE_PAIR  => 'invalid_language_pair',
+        SdkException::UNSUPPORTED_LANGUAGE   => 'unsupported_language',
+        SdkException::UNSUPPORTED_FEATURE    => 'unsupported_feature',
         SdkException::NOT_FOUND              => 'not_found',
         SdkException::PAYLOAD_TOO_LARGE      => 'too_large',
         SdkException::TOO_MANY_REQUESTS      => 'rate_limited',
@@ -61,6 +63,10 @@ final class SupertextException extends \RuntimeException
         if ($e->errorCode === SdkException::INVALID_LANGUAGE_PAIR) {
             $params['source'] = (string) $e->sourceLang;
             $params['target'] = (string) $e->targetLang;
+        }
+
+        if ($e->errorCode === SdkException::UNSUPPORTED_LANGUAGE) {
+            $params['language'] = (string) ($e->targetLang ?? $e->sourceLang);
         }
 
         return new self($e->getMessage(), $e->status ?? 0, $e, self::SDK_KEYS[$e->errorCode] ?? 'failed', $params, (string) $e->detail);

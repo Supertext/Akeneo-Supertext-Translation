@@ -7,7 +7,7 @@ Open a product, choose **… → Translate with Supertext**, tick the locales an
 - Translates localizable text and text area attributes, rich text included (headings, bold text, links and lists are kept; whole sentences are translated)
 - Products, product models and variants; values per channel go into that channel's locales
 - Locales with their own text are kept unless the editor explicitly overwrites them
-- **System → Supertext**: API key (or `SUPERTEXT_API_KEY`), *Test connection*, Supertext language code and formal or informal form of address per locale
+- **System → Supertext**: API key (or `SUPERTEXT_API_KEY`) with an automatic key check and *Test connection*, the Supertext language and formal or informal form of address per locale, and *Send version information to Supertext*
 - Akeneo permissions apply; console commands `supertext:translate` and `supertext:check` for scripts and bulk runs
 - English and German interface
 

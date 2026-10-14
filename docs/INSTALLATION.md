@@ -7,7 +7,8 @@ For administrators: install the bundle, enter the Supertext API key, set up the 
 - Akeneo PIM **Community Edition 2026.4** (tested; 2026.3 should work too), installed from the Community Standard Edition (`akeneo/pim-community-standard`), with its PHP 8.3, MySQL 8.4 and Elasticsearch 8 requirements.
 - Node.js 18 and Yarn, which Akeneo needs anyway to build its front end: the bundle adds screens, so the front end is rebuilt once after installing.
 - A Supertext account and an API key. No Supertext account yet? Create one at [supertext.com](https://www.supertext.com/person/en/account/signin). Generate your API key at [supertext.com → Integrations → API](https://www.supertext.com/en/integrations/api) (requires the Admin role).
-- Outgoing HTTPS from the Akeneo server to `api.supertext.com`, and PHP's curl extension (part of Akeneo's requirements).
+- Outgoing HTTPS from the Akeneo server to `api.supertext.com` (and, for the optional version information, to Supertext's Commando Center), and PHP's curl extension (part of Akeneo's requirements).
+- `AKENEO_PIM_URL` set to the PIM's public address, as Akeneo expects anyway (it is the site URL in version reports and the base of the ping address).
 
 The bundle is for the self-hosted Community Edition. Akeneo's SaaS editions (Serenity, Growth) don't run third-party bundles.
 
@@ -47,7 +48,7 @@ The bundle is for the self-hosted Community Edition. Akeneo's SaaS editions (Ser
 
    Without this step the *Translate with Supertext* entry and the System → Supertext page don't appear.
 
-The bundle needs no database migration: it keeps its settings as one row in Akeneo's `pim_configuration` table.
+The bundle needs no database migration: it keeps its settings as one row in Akeneo's `pim_configuration` table (code `supertext_translation`), and the state of the version reports and the latest API key check in a second row (`supertext_translation_reporter`).
 
 ### Update
 
@@ -61,13 +62,23 @@ Then repeat step 4. See [CHANGELOG.md](../CHANGELOG.md) for what changed.
 
 1. Remove the line from `config/bundles.php` and delete `config/routes/supertext_translation.yml`.
 2. `composer remove supertext/akeneo-supertext-translation`, then repeat step 4.
-3. Optional: delete the saved settings with `DELETE FROM pim_configuration WHERE code = 'supertext_translation';`.
+3. Optional: delete the saved settings with `DELETE FROM pim_configuration WHERE code IN ('supertext_translation', 'supertext_translation_reporter');`.
 
 Translations that were already made stay in your products: they are ordinary product values.
 
 ## API key
 
-Open **System → Supertext**, paste the key into **API key** and click **Save**. **Test connection** checks the key with Supertext (free of charge). You can paste the key with or without the `Supertext-Auth-Key` prefix Supertext shows it with.
+Open **System → Supertext**, paste the key into **API key** and click **Save**. Every save checks the key with Supertext automatically (free of charge, nothing is translated) and the page shows the result with its time; **Test connection** runs the same check again, with the key typed in the form if there is one. An invalid key never blocks saving. You can paste the key with or without the `Supertext-Auth-Key` prefix Supertext shows it with.
+
+| Result shown | Meaning |
+| --- | --- |
+| API key checked: the connection to Supertext works. | Supertext accepted the key. |
+| Supertext rejected the API key. … | Supertext answered 401/403: the key is incomplete, revoked or for another environment. The message links to supertext.com → Integrations → API and the account signup. |
+| No API key is set yet. … | Neither a saved key nor `SUPERTEXT_API_KEY`. |
+| The API key couldn't be checked because Supertext can't be reached. … | Network error, timeout or HTTP 5xx: the Akeneo server can't reach `api.supertext.com`. |
+| The API key couldn't be checked: Supertext answered with an error (…). … | Any other answer; the HTTP status is shown. |
+
+The check also runs when the key from `SUPERTEXT_API_KEY` changes (the bundle compares a SHA-256 fingerprint kept in the database, never the key itself) and when Supertext rejects the key during a translation (the result becomes *rejected* without another request).
 
 ![System → Supertext with a saved API key, the links to create an account and generate a key, and the language table](images/06-settings.png)
 
@@ -88,8 +99,14 @@ Akeneo translates between **locales**, and a locale is active when a channel use
 ![The E-commerce channel with the locales German, English, French and Italian (Switzerland)](images/09-channel-locales.png)
 
 - Values of attributes that are *localizable* get one value per locale. Values that are also *scopable* (per channel) are translated into the locales of their channel only.
-- Each target locale goes to Supertext as its language code with the region: `de_CH` becomes `de-CH`, `en_US` becomes `en-US`. The source locale is sent without region (`en_US` → `en`), as Supertext expects. Override the code under **System → Supertext → Languages** if you need another one (for example `de-CH` for a `de_DE` locale whose texts follow Swiss spelling). Give the override with a region: a bare code such as `de` is sent as `de-DE` (`fr` → `fr-FR`, `en` → `en-US`, …), because Supertext rejects target languages without one.
-- **Form of address** per locale: *Default*, *Formal* or *Informal* (for languages that distinguish them, such as German *Sie* and *du*).
+- **Language mapping.** Supertext accepts only its own language codes, and the bundle doesn't guess: under **System → Supertext → Languages** every activated locale gets a **Supertext language** from Supertext's list (shown with name and code).
+  - A locale that equals a Supertext code (apart from case and `_`/`-`) is pre-filled and needs nothing: `de_CH` → `de-CH`, `de_DE` → `de-DE`, `en_US` → `en-US`, `fr_FR` → `fr-FR`, `it_CH` → `it-CH`, `pt_BR` → `pt-BR`.
+  - All other locales must be mapped, otherwise they can't be translated (the page marks them *Not mapped*; the dialog greys them out). Supertext uses a region only for German, English, French, Italian and Portuguese, a script for Chinese and Serbian and bare codes for all other languages, so for example `es_ES` → `es`, `nl_NL` → `nl`, `sv_SE` → `sv`, `ja_JP` → `ja`, `zh_CN` → `zh-Hans`, `zh_TW` → `zh-Hant`.
+  - You can also choose another variant than the exact match, e.g. `de-CH` for a `de_DE` locale whose texts follow Swiss spelling, or `gsw-u-sd-chzh` (Swiss German, Zurich).
+  - The same mapping is used for the source: the source is sent as Supertext's bare language (`en_US` → `en`, a `de_DE` mapped to `de-CH` → `de`).
+- **Form of address** per locale: *Default*, *Formal* or *Informal* (for languages that distinguish them, such as German *Sie* and *du*). Supertext doesn't offer it for English (`en-GB`, `en-US`), Swiss German, Romansh (`rm`), Albanian (`sq`) and Serbian; for those the page shows a note, and a *Formal* or *Informal* that was set anyway makes the translation fail with a message to set it to *Default*.
+
+Supertext's languages (October 2026): targets `bg`, `cs`, `da`, `de-AT`, `de-CH`, `de-DE`, `el`, `en-GB`, `en-US`, `es`, `fi`, `fr-CH`, `fr-FR`, `gsw-u-sd-chbe`, `gsw-u-sd-chzh`, `hr`, `hu`, `it-CH`, `it-IT`, `ja`, `ko`, `nb`, `nl`, `pl`, `pt-BR`, `pt-PT`, `rm`, `ru`, `sk`, `sl`, `sq`, `sr-Cyrl`, `sr-Latn`, `sv`, `tr`, `zh-Hans`, `zh-Hant`; sources (bare) `bg`, `cs`, `da`, `de`, `el`, `en`, `es`, `fi`, `fr`, `gsw`, `hr`, `hu`, `it`, `ja`, `ko`, `nb`, `nl`, `pl`, `pt`, `rm`, `ru`, `sk`, `sl`, `sq`, `sr`, `sv`, `tr`, `zh`. `bin/console supertext:check` lists every activated locale with the code it is sent as, or *not mapped*.
 
 ## Which values are translated
 
@@ -117,15 +134,28 @@ There is no separate permission for translating: whoever may edit a product's at
 | Supertext API | System → Supertext | Live | *Live* (`https://api.supertext.com/v1/`), *Staging*, *Testing* or *Custom address*. `SUPERTEXT_API_URL` overrides it (for tests against a stand-in). |
 | API address | System → Supertext | none | Only for *Custom address*. |
 | Timeout (seconds) | System → Supertext | 180 | How long to wait for one language (30 to 1800). |
-| Supertext language code | System → Supertext → Languages | the locale with a hyphen | Per locale, e.g. `de-CH`. A code without region gets the usual one (`de` → `de-DE`). |
-| Form of address | System → Supertext → Languages | Default | Per locale: Default, Formal, Informal. |
+| Send version information to Supertext | System → Supertext, or `SUPERTEXT_VERSION_REPORTS` | on | See *Version information* below. `SUPERTEXT_VERSION_REPORTS=0` (or `false`, `off`, `no`) turns it off, `1` on; the variable takes precedence over the checkbox. |
+| Supertext language | System → Supertext → Languages | the exact match, else none | Per locale, from Supertext's list (e.g. `de-CH`, `es`). Locales without one (*Not mapped*) can't be translated. See *Languages*. |
+| Form of address | System → Supertext → Languages | Default | Per locale: Default, Formal, Informal (not offered for every language). |
 
 The bottom of System → Supertext shows the installed version of the bundle (as Composer reports it) with a link to its GitHub release; `bin/console supertext:check` prints it too.
+
+## Version information
+
+**Send version information to Supertext** (System → Supertext) is on by default:
+
+> Sends the site URL and the versions of this plugin, the PIM and the runtime to Supertext when you save these settings and after an update, so Supertext support can see which version you run. No content, no API key and no personal data are sent.
+
+A report goes from the Akeneo server (never from the browser) to Supertext's Commando Center when the settings are saved, after an update of the bundle, Akeneo or PHP (noticed on the next request to System → Supertext, the translate dialog or a `supertext:` command), when the result of the API key check changes, and on `bin/console supertext:check`. It contains exactly: the site URL (`AKENEO_PIM_URL`, else the address the request came in on), the bundle's name (`Akeneo-Supertext-Translation`) and version, the Akeneo PIM and PHP versions, the Supertext SDK version, whether an API key is set, the result of the API key check (status, time, HTTP status, Supertext's error code) and the address of the ping endpoint. **No content, no API key and no personal data.** A report that fails is not retried for an hour and never slows down or breaks a save or a translation.
+
+To turn it off, clear the checkbox and save, or set `SUPERTEXT_VERSION_REPORTS=0` on the server (it wins over the checkbox, which is then read-only). Nothing at all is sent then, and the ping endpoint answers 404. The API key check keeps running either way.
+
+**Ping endpoint:** `GET <AKENEO_PIM_URL>/supertext/ping?challenge=…` is public (no login, no session, answered before Akeneo's login firewall) and answers only `{"ok":true,"plugin":"Akeneo-Supertext-Translation","challenge":"…"}` with `Cache-Control: no-store`, so Supertext can see that the PIM is reachable from the internet. It returns nothing else: no versions, no settings, no data. If a reverse proxy or firewall in front of Akeneo only lets known paths through, allow `/supertext/ping`.
 
 ## Console commands
 
 ```bash
-bin/console supertext:check                                      # is the key set and accepted?
+bin/console supertext:check                                      # key check, language mapping, version report
 bin/console supertext:translate praline-box-16 --from=en_US      # into all other locales
 bin/console supertext:translate sku-1 sku-2 --from=en_US --to=de_CH,fr_CH --overwrite
 bin/console supertext:translate dark-chocolate-bar --model --from=en_US   # product models by code
@@ -140,6 +170,12 @@ Products are given by identifier or UUID. Without `--overwrite`, values that alr
 | No *Translate with Supertext* entry in the product's "…" menu, or no System → Supertext | The front end wasn't rebuilt after installing: repeat step 4 of *Install*, then reload the browser. Check that the user has the permissions above. |
 | "No Supertext API key is configured." | Enter the key under System → Supertext or set `SUPERTEXT_API_KEY`. No Supertext account yet? Create one at supertext.com. Generate your API key at supertext.com → Integrations → API (requires the Admin role). |
 | "Authentication failed. Please check the Supertext API key." | The key is wrong or was revoked: generate a new one at <https://www.supertext.com/en/integrations/api> and save it. |
+| "Supertext rejected the API key" on System → Supertext | Check that the whole key was copied (or `SUPERTEXT_API_KEY`), or generate a new one at <https://www.supertext.com/en/integrations/api> (Admin role required). No Supertext account yet? Create one at <https://www.supertext.com/person/en/account/signin>. Save again or click *Test connection*. |
+| "The API key couldn't be checked because Supertext can't be reached" | The Akeneo server can't reach `api.supertext.com` (firewall, proxy, DNS). Translations need the same connection. |
+| "The language … has no Supertext language yet." / *Not mapped* | Choose a Supertext language for that locale under System → Supertext → Languages (see *Languages*), then save. |
+| "Supertext offers no formal or informal tone for this language." | Set the locale's *Form of address* to *Default* under System → Supertext → Languages. |
+| "Supertext does not support this language pair" | Check the mapping of both locales under System → Supertext → Languages (source and target must differ and be Supertext languages). |
+| `supertext:check` says "Version reports to Supertext: not sent (set AKENEO_PIM_URL …)" | Commands don't know the PIM's address without `AKENEO_PIM_URL`; set it in `.env.local` (Akeneo uses it for e-mails and the API too). |
 | "Too many requests to Supertext." | The API limits requests per second per key. The bundle already retries; wait a moment and try again. |
 | "Timed out waiting for the Supertext translation." | Raise *Timeout* under System → Supertext, or translate fewer languages at once. |
 | "Akeneo did not accept the translation: …" | Akeneo's own validation rejected a translated value (for example a text attribute's maximum length). That language is left unchanged; the others are saved. |

@@ -11,6 +11,8 @@ type Context = {
   configured: boolean;
   links: Links;
   source: string;
+  /** Locales without a Supertext language (no mapping under System → Supertext, no exact match). */
+  unmapped: string[];
   variant: boolean;
   locales: {code: string; label: string}[];
   preview: {units: number; targets: {[locale: string]: TargetPreview}};
@@ -21,7 +23,13 @@ type ServerMessage = {message: string; key?: string; params?: {[name: string]: s
 
 type TargetResult = ServerMessage & {status: 'translated' | 'nothing' | 'error'; translated: number; existing: number};
 
-type LanguageSetting = {locale: string; label: string; code: string; default_code: string; politeness: '' | 'more' | 'less'};
+type LanguageSetting = {locale: string; label: string; code: string; exact_code: string; politeness: '' | 'more' | 'less'};
+
+/** A Supertext target language (the SDK's Languages::TARGETS). */
+type TargetLanguage = {code: string; name: string; politeness: boolean};
+
+/** The latest automatic API key check (keycheck.<status> in jsmessages). */
+type KeyCheck = {status: 'ok' | 'invalid' | 'missing' | 'unreachable' | 'error'; checked_at: string; http_status: number | null};
 
 type SettingsData = {
   version: string;
@@ -34,6 +42,12 @@ type SettingsData = {
   effective_url: string;
   timeout: number;
   languages: LanguageSetting[];
+  targets: TargetLanguage[];
+  version_reports: boolean;
+  version_reports_from_environment: boolean;
+  version_reports_enabled: boolean;
+  ping_url: string;
+  key_check: KeyCheck | null;
   links: Links;
 };
 
@@ -90,7 +104,7 @@ const fetchSettings = () => request<SettingsData>('supertext_translation_rest_se
 const saveSettings = (input: object) => request<SettingsData>('supertext_translation_rest_settings_save', {}, input);
 
 const testConnection = (input: object) =>
-  request<ServerMessage & {ok: boolean}>('supertext_translation_rest_settings_test', {}, input);
+  request<{ok: boolean; message: string; key_check: KeyCheck | null}>('supertext_translation_rest_settings_test', {}, input);
 
 export {ApiError, localize, fetchContext, translate, fetchSettings, saveSettings, testConnection};
-export type {EntityType, Context, TargetResult, SettingsData, LanguageSetting, Links, ServerMessage};
+export type {EntityType, Context, TargetResult, SettingsData, LanguageSetting, TargetLanguage, KeyCheck, Links, ServerMessage};

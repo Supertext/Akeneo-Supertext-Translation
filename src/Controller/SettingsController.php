@@ -13,9 +13,11 @@ namespace Supertext\AkeneoTranslationBundle\Controller;
 use Akeneo\UserManagement\Bundle\Context\UserContext;
 use Oro\Bundle\SecurityBundle\SecurityFacade;
 use Supertext\AkeneoTranslationBundle\Api\SupertextClient;
-use Supertext\AkeneoTranslationBundle\Api\SupertextException;
+use Supertext\AkeneoTranslationBundle\Reporting\Reporting;
 use Supertext\AkeneoTranslationBundle\Settings\Settings;
 use Supertext\AkeneoTranslationBundle\Translation\EntityTranslator;
+use Supertext\Sdk\V1\ApiKeyCheck;
+use Supertext\Sdk\V1\Languages;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -23,6 +25,9 @@ use Symfony\Component\HttpFoundation\Response;
 /**
  * Internal API behind System → Supertext. Needs Akeneo's "System configuration" permission
  * (oro_config_system), like System → Configuration. The API key is never sent back.
+ *
+ * Commando Center: opening the page runs the reporter's onRequest after the response, saving
+ * runs afterSettingsSaved (its key check is shown on the page), Test connection runs testConnection.
  */
 final class SettingsController
 {
@@ -33,16 +38,19 @@ final class SettingsController
         private readonly EntityTranslator $translator,
         private readonly SecurityFacade $securityFacade,
         private readonly UserContext $userContext,
+        private readonly Reporting $reporting,
     ) {
     }
 
-    public function getAction(): JsonResponse
+    public function getAction(Request $request): JsonResponse
     {
         if (!$this->securityFacade->isGranted(self::ACL)) {
             return new JsonResponse(['message' => 'You are not allowed to change the system configuration.', 'key' => 'forbidden_settings'], Response::HTTP_FORBIDDEN);
         }
 
-        return new JsonResponse($this->payload());
+        $this->reporting->defer(Reporting::ON_REQUEST, self::siteUrl($request));
+
+        return new JsonResponse($this->payload($request));
     }
 
     public function saveAction(Request $request): JsonResponse
@@ -58,7 +66,10 @@ final class SettingsController
             return new JsonResponse(['message' => implode(' ', array_column($errors, 'message')), 'errors' => $errors], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
-        return new JsonResponse($this->payload());
+        // The automatic API key check (cost-free) and the settings_saved report; never fails the save.
+        $result = $this->reporting->run(Reporting::AFTER_SETTINGS_SAVED, self::siteUrl($request));
+
+        return new JsonResponse($this->payload($request, $result?->check));
     }
 
     /** Cost-free check of the key (the one typed in the form, else the saved one). */
@@ -77,21 +88,25 @@ final class SettingsController
             $url = SupertextClient::baseUrlFor((string) $input['environment'], $input['environment'] === 'custom' ? (string) ($input['api_url'] ?? '') : '');
         }
 
-        if ($key === '') {
-            return new JsonResponse(['ok' => false, 'message' => 'No Supertext API key is configured.', 'key' => 'no_api_key'], Response::HTTP_OK);
-        }
+        // The same automatic key check as after saving (stored and shown on the page; a changed result is reported).
+        $result = $this->reporting->run(Reporting::TEST_CONNECTION, self::siteUrl($request), $key, $url);
+        $check  = $result?->check;
 
-        try {
-            (new SupertextClient($key, $url, 30))->validateApiKey();
-        } catch (SupertextException $e) {
-            return new JsonResponse(['ok' => false] + $e->toArray(), Response::HTTP_OK);
-        }
+        return new JsonResponse([
+            'ok'        => $check?->status === ApiKeyCheck::OK,
+            'key_check' => Reporting::checkToArray($check),
+            'message'   => $check !== null ? Reporting::checkMessage($check) : 'The API key could not be checked.',
+        ]);
+    }
 
-        return new JsonResponse(['ok' => true, 'message' => sprintf('Connected to %s.', $url), 'key' => 'connected', 'params' => ['url' => $url]]);
+    /** The site's base URL: AKENEO_PIM_URL, else scheme, host and base path of the request. */
+    private static function siteUrl(Request $request): ?string
+    {
+        return Settings::siteUrl($request->getSchemeAndHttpHost() . $request->getBasePath());
     }
 
     /** @return array<string, mixed> */
-    private function payload(): array
+    private function payload(Request $request, ?ApiKeyCheck $check = null): array
     {
         $key       = $this->settings->apiKey();
         $uiLocale  = (string) $this->userContext->getUiLocaleCode();
@@ -99,16 +114,19 @@ final class SettingsController
 
         foreach ($this->translator->activatedLocales() as $locale) {
             $stored      = $this->settings->languages()[$locale] ?? [];
+            $exact       = Settings::exactLanguageCode($locale);
             $languages[] = [
-                'locale'       => $locale,
-                'label'        => (string) \Locale::getDisplayName($locale, $uiLocale !== '' ? $uiLocale : 'en_US'),
-                'code'         => (string) ($stored['code'] ?? ''),
-                'default_code' => Settings::defaultLanguageCode($locale),
-                'politeness'   => $this->settings->politeness($locale),
+                'locale'     => $locale,
+                'label'      => (string) \Locale::getDisplayName($locale, $uiLocale !== '' ? $uiLocale : 'en_US'),
+                // The saved mapping, else the exact match (pre-filled), else "" (not mapped: nothing can be sent).
+                'code'       => (string) ($stored['code'] ?? $exact ?? ''),
+                'exact_code' => (string) $exact,
+                'politeness' => $this->settings->politeness($locale),
             ];
         }
 
         $version = Settings::version();
+        $siteUrl = self::siteUrl($request);
 
         return [
             'version'                  => $version,
@@ -121,6 +139,13 @@ final class SettingsController
             'effective_url'            => $this->settings->baseUrl(),
             'timeout'                  => $this->settings->timeout(),
             'languages'                => $languages,
+            // Supertext's target languages (code, name, politeness) for the mapping's drop-downs.
+            'targets'                  => Languages::TARGETS,
+            'version_reports'          => $this->settings->versionReports() ?? true,
+            'version_reports_from_environment' => $this->settings->versionReportsFromEnvironment(),
+            'version_reports_enabled'  => $this->settings->versionReportsEnabled(),
+            'ping_url'                 => $siteUrl !== null ? Reporting::pingUrl($siteUrl) : '',
+            'key_check'                => Reporting::checkToArray($check ?? $this->reporting->lastCheck()),
             'links'                    => ['signup' => Settings::SIGNUP_URL, 'api_key' => Settings::API_KEY_URL],
         ];
     }

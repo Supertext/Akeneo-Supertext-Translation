@@ -13,6 +13,8 @@ namespace Supertext\AkeneoTranslationBundle\Command;
 use Akeneo\Pim\Enrichment\Component\Product\Model\EntityWithValuesInterface;
 use Ramsey\Uuid\Uuid;
 use Supertext\AkeneoTranslationBundle\Api\SupertextException;
+use Supertext\AkeneoTranslationBundle\Reporting\Reporting;
+use Supertext\AkeneoTranslationBundle\Settings\Settings;
 use Supertext\AkeneoTranslationBundle\Translation\EntityTranslator;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Input\InputArgument;
@@ -31,6 +33,7 @@ final class TranslateCommand extends Command
         private readonly object $productRepository,
         private readonly object $productModelRepository,
         private readonly EntityTranslator $translator,
+        private readonly Reporting $reporting,
     ) {
         parent::__construct();
     }
@@ -69,7 +72,10 @@ final class TranslateCommand extends Command
             }
         }
 
-        $failed = false;
+        $failed  = false;
+        // Version report / key check when the command ends (console.terminate); site URL from AKENEO_PIM_URL.
+        $siteUrl = Settings::siteUrl();
+        $this->reporting->defer(Reporting::ON_REQUEST, $siteUrl);
 
         foreach ($input->getArgument('identifiers') as $identifier) {
             $entity = $this->find((string) $identifier, (bool) $input->getOption('model'));
@@ -88,6 +94,8 @@ final class TranslateCommand extends Command
 
                 return Command::FAILURE;
             }
+
+            $this->reporting->deferAfterTranslation($siteUrl, $results);
 
             foreach ($results as $target => $result) {
                 $line = match ($result['status']) {

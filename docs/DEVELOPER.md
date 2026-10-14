@@ -8,10 +8,12 @@ A Symfony bundle for Akeneo PIM Community Edition 2026 (Symfony 5.4, PHP 8.3). C
 
 | Path | Purpose |
 | --- | --- |
-| `lib/supertext-sdk/` | The [Supertext SDK for PHP](https://github.com/Supertext/Supertext-API-SDK-and-Guide/tree/main/sdk/php), copied (see *Supertext SDK*): the API protocol (upload, polling, download, delete), packing values into HTML documents, language codes, HTTP 429 retries, curl transport. Namespace `Supertext\Sdk`. |
+| `lib/supertext-sdk/` | The [Supertext SDK for PHP](https://github.com/Supertext/Supertext-API-SDK-and-Guide/tree/main/sdk/php), copied (see *Supertext SDK*): the API protocol (upload, polling, download, delete), packing values into HTML documents, Supertext's language list (`Languages`), HTTP 429 retries, curl transport, the Commando Center reporter (`InstallationReporter`). Namespace `Supertext\Sdk\V1` (API v1; `Supertext\Sdk\Http` for the transport). |
 | `src/Api/SupertextClient.php` | The bundle's layer over the SDK: environments (Live, Staging, Testing, custom), key normalization, `translateTexts()` and `validateApiKey()`. No Akeneo classes. |
 | `src/Api/SupertextException.php` | Errors with the UI key (`supertext_translation.error.<key>`); `fromSdk()` maps the SDK's error codes to the keys. |
-| `src/Settings/Settings.php`, `SettingsRepository.php` | Settings from System → Supertext (one JSON row in `pim_configuration`, code `supertext_translation`), with `SUPERTEXT_API_KEY` and `SUPERTEXT_API_URL` taking precedence. |
+| `src/Settings/Settings.php`, `SettingsStorage.php`, `SettingsRepository.php` | Settings from System → Supertext (one JSON row in `pim_configuration`, code `supertext_translation`), with `SUPERTEXT_API_KEY`, `SUPERTEXT_API_URL` and `SUPERTEXT_VERSION_REPORTS` taking precedence; the language mapping (`languageCode()`, `sourceCode()`); the site URL. The reporter's state is a second row (`supertext_translation_reporter`). `SettingsStorage` is the interface the unit tests replace. |
+| `src/Reporting/Reporting.php` | Commando Center: the SDK's `InstallationReporter` with Akeneo's site URL and versions, the stored state, deferred actions, the ping answer. No Akeneo or Symfony classes. |
+| `src/EventListener/ReportingSubscriber.php` | The public ping route (`kernel.request`, priority 512, before routing and the firewall) and the deferred reporter actions (`kernel.terminate`, `console.terminate`). |
 | `src/Translation/Planner.php`, `TextUnit.php` | Which source values go into which target locale (channels, locale-specific attributes, existing text). No Akeneo classes. |
 | `src/Translation/EntityTranslator.php` | Collects a product's or product model's text values, translates them per target locale and applies them with Akeneo's updater, validator and saver. |
 | `src/Controller/TranslateController.php` | Internal API for the dialog: `GET /supertext/rest/{product\|product_model}/{id}` (languages, preview) and `POST …/translate`. |
@@ -46,30 +48,52 @@ Keep these in sync with *What is translated* in [USER_GUIDE.md](USER_GUIDE.md#wh
 
 Shared with the WordPress plugin and every other Supertext plugin:
 
-1. `POST {base}translate/ai/file`: multipart with `file` (part `Content-Type` exactly `text/html`, no charset, or the API answers 415), `target_lang` (with a region, e.g. `de-CH`), optional `source_lang` (bare language, e.g. `en`); see *Language codes*, optional `politeness` (`more`/`less`). Returns `{file_id}`.
+1. `POST {base}translate/ai/file`: multipart with `file` (part `Content-Type` exactly `text/html`, no charset, or the API answers 415), `target_lang` (a Supertext target code, e.g. `de-CH` or `es`), optional `source_lang` (bare language, e.g. `en`); see *Language codes*, optional `politeness` (`more`/`less`). Returns `{file_id}`.
 2. `GET …/{file_id}/status` until `done` (`error`, `limit_exceeded`, `deleted` are terminal).
 3. `GET …/{file_id}/translation` returns the translated HTML.
 4. `DELETE …/{file_id}` (files also expire after 24 h).
 
-Auth header: `Authorization: Supertext-Auth-Key <key>`. The header name must be `Authorization` (`Authentication` gets 403). Supertext shows the key with the prefix, so the client strips a pasted `Supertext-Auth-Key ` and always sends exactly one. Base URLs: `https://api.supertext.com/v1/` (live), `https://api.staging.supertext.com/v1/`, `https://api.testing.supertext.com/v1/`. `GET features` is the cost-free key check (*Test connection*, `supertext:check`).
+Auth header: `Authorization: Supertext-Auth-Key <key>`. The header name must be `Authorization` (`Authentication` gets 403). Supertext shows the key with the prefix, so the client strips a pasted `Supertext-Auth-Key ` and always sends exactly one. Base URLs: `https://api.supertext.com/v1/` (live), `https://api.staging.supertext.com/v1/`, `https://api.testing.supertext.com/v1/`. `GET features` is the cost-free key check (after saving the settings, *Test connection*, `supertext:check`; see *Commando Center*).
 
 **Rate limit:** the API limits requests per second per key (HTTP 429). The SDK retries a 429 up to 4 times, waiting for `Retry-After` if sent, otherwise 1, 2, 4 and 8 seconds plus jitter. Target locales are translated one after the other.
 
 The protocol, the HTML packing (one `<div data-st-id="N">` per value: plain text escaped with line breaks as `<br>`, rich text as is; documents below 900,000 characters) and the error codes are the SDK's; see its [integration guide](https://github.com/Supertext/Supertext-API-SDK-and-Guide/blob/main/docs/integration-guide.md).
 
-Locale codes: an Akeneo locale (`de_CH`) is sent as `de-CH` unless System → Supertext sets another code. The source is sent as its primary subtag (`en`).
+Locale codes: see *Language codes*.
 
 ## Language codes
 
-Supertext wants the **source as a bare language** (`en`, `de`, `fr`) and the **target as a regional code** (`de-DE`, `fr-CH`, `en-US`). A bare target such as `de`, or a regional source such as `en-US`, is rejected with `INVALID_LANGUAGE_PAIR`. Translating within one language (`en` → `en-GB`) is allowed.
+Supertext accepts exactly the codes of its `GET features` (the SDK's `Languages::TARGETS` / `SOURCES`, October 2026): targets are regional only for German, English, French, Italian and Portuguese (`de-CH`, `en-US`, `pt-BR`), have a script for Chinese and Serbian (`zh-Hans`, `sr-Latn`), a dialect for Swiss German (`gsw-u-sd-chzh`, `gsw-u-sd-chbe`) and are **bare for all others** (`es`, `nl`, `sl`, `ja`, …); sources are always bare (`en`). Anything else is HTTP 404 `INVALID_LANGUAGE_PAIR`, including the "default regions" earlier versions added (`es-ES`, `sl-SI`, `zh-CN`). Politeness exists for every target except `en-GB`, `en-US`, `gsw-u-sd-*`, `rm`, `sq`, `sr-Cyrl`, `sr-Latn` (otherwise HTTP 400 `FEATURE_ERROR` → `unsupported_feature`).
 
-The SDK's `Supertext\Sdk\LanguageCodes` (tested in the SDK repository against its shared test vectors) turns locales into the codes sent:
+**No guessing.** `Settings::languageCode()` / `sourceCode()` resolve an Akeneo locale with the SDK's `Languages::target($locale, $mapping)` / `Languages::source($locale, $mapping)`, using one mapping for both (`Settings::mapping()`: the *Supertext language* per locale under System → Supertext → Languages, stored as `languages.<locale>.code`):
 
-- **Source:** the bare language of the source locale's *Supertext language code* (System → Supertext → Languages), else of the locale (`en_US` → `en`).
-- **Target:** the target locale's *Supertext language code* if set (normalized when saved and sent: `de_ch` → `de-CH`), else the Akeneo locale. Akeneo locales always carry a region (`de_CH` → `de-CH`). Either way, a code with a region keeps it, normalized (`de_CH`/`de-ch` → `de-CH`; scripts and numeric regions such as `zh-Hant`, `es-419` keep their form); a bare language gets its default region: ar→ar-SA, bg→bg-BG, cs→cs-CZ, da→da-DK, de→de-DE, el→el-GR, en→en-US, es→es-ES, et→et-EE, fi→fi-FI, fr→fr-FR, hr→hr-HR, hu→hu-HU, it→it-IT, ja→ja-JP, ko→ko-KR, lt→lt-LT, lv→lv-LV, nb→nb-NO, nl→nl-NL, pl→pl-PL, pt→pt-PT, ro→ro-RO, ru→ru-RU, sk→sk-SK, sl→sl-SI, sr→sr-RS, sv→sv-SE, th→th-TH, tr→tr-TR, uk→uk-UA, vi→vi-VN, zh→zh-CN (same table as the other Supertext plugins). Unknown bare codes are sent unchanged, so Supertext's error names them.
+1. The mapping's code, if the locale has one (sent as it is, so a language Supertext adds before the SDK lists it works; as source in its source form: a `de_DE` mapped to `de-CH` is sent as `de`).
+2. Else a Supertext code equal to the locale apart from case and `_`/`-` (`de_CH` → `de-CH`; as source the first subtag: `en_US` → `en`).
+3. Else `unsupported_language` (SDK error, mapped to the UI key `unsupported_language` with `{{ language }}`), and nothing is sent. The translate dialog greys out such locales (`unmapped` in the context answer), the settings page marks them *Not mapped*, `supertext:check` lists them.
 
-`Settings::languageCode()` / `sourceCode()` feed `SupertextClient`, which applies the same rule to whatever it is given; the stand-in (`tests/docs/stand-in.mjs`) rejects bare targets and regional sources like the real API.
+Saving (`Settings::update()`) normalizes a code to Supertext's spelling (`ES` → `es`, `fr_ch` → `fr-CH`) and stores only codes that differ from the exact match. The settings page offers `Languages::TARGETS` (name and code) per locale, pre-filled with the exact match, and shows a note where `politeness` is false; a *Formal*/*Informal* value set for such a target is kept and sent, so the editor gets `unsupported_feature` instead of a silently different tone. `SupertextClient` sends the codes it is given unchanged. The stand-in (`tests/docs/stand-in.mjs`) accepts only Supertext's codes, like the real API.
 
+## Commando Center (version reports, API key check, ping)
+
+Every Supertext plugin implements the center's *Report protocol* (Commando-Center-Supertext-Translation → `docs/DEVELOPER.md`); the protocol itself is the SDK's `InstallationReporter` (`checkApiKey()`, `reportsEnabled()`, `pingResponse()`, `ReporterState`). `src/Reporting/Reporting.php` adds what Akeneo knows:
+
+- **Reporter options:** plugin `Akeneo-Supertext-Translation` (the GitHub repository name) with `Settings::version()` (Composer, from the Git tag); system `Akeneo PIM` with the version of `akeneo/pim-community-dev` from Composer; runtime PHP (the SDK's default); site URL `AKENEO_PIM_URL`, else the request's scheme, host and base path (`Settings::siteUrl()`); callback `<site URL>/supertext/ping`; the key check goes to the configured API (`Settings::baseUrl()`), the report to `SUPERTEXT_REPORT_URL` or the SDK's default.
+- **Enabled:** `InstallationReporter::reportsEnabled($settings->versionReports(), SUPERTEXT_VERSION_REPORTS)`: the variable wins (read from `$_SERVER`/`$_ENV`/`getenv`, since Symfony's Dotenv doesn't `putenv`), else the setting `version_reports`, else on. Without a site URL (a command without `AKENEO_PIM_URL`) the reporter is built disabled, so only the key check runs.
+- **When:**
+
+  | Where | Action |
+  | --- | --- |
+  | `SettingsController::saveAction` (after storing) | `afterSettingsSaved`, synchronously: its `check` is returned in the payload (`key_check`) and shown on the page |
+  | `SettingsController::testAction` (*Test connection*) | `testConnection` with the key typed in the form (else the saved one) against the API chosen in the form |
+  | `SettingsController::getAction`, `TranslateController` (context and translate), `supertext:translate` | `onRequest`, deferred |
+  | a translation result with key `auth_failed` (401/403) | `authenticationFailed` with the HTTP status, deferred (`Reporting::deferAfterTranslation()`) |
+  | `supertext:check` | `testConnection`, then `reportCheck` (a `check` report) |
+
+  Deferred actions run in `ReportingSubscriber` on `kernel.terminate` (after the response is sent; with PHP-FPM the connection is already closed) or `console.terminate`. Front-end page views never run the reporter.
+- **State:** the SDK's `ReporterState` as JSON in `pim_configuration`, code `supertext_translation_reporter` (`Settings::reporterState()` / `saveReporterState()`, which swallow database errors). It holds the versions last reported, the key status last reported, the time of the last failed report and the latest key check (status, time, HTTP status, Supertext's error code and a SHA-256 fingerprint of the key, kept locally and never sent). Never the key.
+- **Never breaks anything:** the SDK never throws; `Reporting::run()` catches everything else (storage included) and returns null.
+- **Ping:** `ReportingSubscriber::onRequest` answers `GET /supertext/ping` on the main request at `kernel.request` priority 512, i.e. before the router (32), the session (128) and Akeneo's firewall (8), so it needs no login, opens no session and has no CSRF token. It sends `Reporting::ping()` = `InstallationReporter::pingResponse()` (200 with the challenge, 400 for a malformed challenge, 404 while reports are off) as status, headers and body; Symfony's response adds `private` to `Cache-Control: no-store`. Other methods fall through to Akeneo (login redirect).
+- **Settings page:** `version_reports` (checkbox; read-only with the variable's value when `SUPERTEXT_VERSION_REPORTS` is set), `key_check` (shown as `keycheck.<status>` in the four languages, with the time and, in the text, links to supertext.com → Integrations → API and the signup), `ping_url`.
 
 ## Local development
 
@@ -88,11 +112,11 @@ PHP changes need `rm -rf var/cache`; translation changes need `bin/console pim:i
 ## Tests
 
 ```bash
-phpunit                                                     # unit tests (src/Api with the SDK, src/Translation/Planner, translation files)
+phpunit                                                     # unit tests (src/Api with the SDK, Settings, Reporting, Planner, translation files)
 find src tests demo/project/supertext-demo -name '*.php' -print0 | xargs -0 -n1 php -l
 ```
 
-The unit tests need only PHPUnit 11 (no Akeneo install). `tests/demo-check.sh` is the end-to-end test: it starts the demo image twice against MySQL and Elasticsearch with the stand-in API, checks the demo accounts (created once, passwords never logged), and translates the sample product and product model with `supertext:translate`, checking the stored values.
+The unit tests need only PHPUnit 11 (no Akeneo install). `tests/unit/SettingsTest.php` covers the language mapping (exact match, mapping for target and source, no default regions, saving) and the reporting setting; `tests/unit/ReportingTest.php` the reporter glue with a fake transport for Supertext and the center (when each action reports, failures and the one-hour backoff, reports off, state without the key, ping answers); `tests/Support/MemoryStorage.php` replaces the database. `tests/demo-check.sh` is the end-to-end test: it starts the demo image twice against MySQL and Elasticsearch with the stand-in API, checks the demo accounts (created once, passwords never logged), translates the sample product and product model with `supertext:translate`, checking the stored values, calls the public ping route and checks that the stand-in's fake Commando Center received an `installed` and a `check` report (`SUPERTEXT_REPORT_URL=http://127.0.0.1:8765/report`), without the API key.
 
 **CI** (`.github/workflows/ci.yml`): lint and unit tests on every push; the `phpstan` job runs PHPStan (see *Code quality and security checks*); the `demo` job builds the demo image (about 20 minutes: Composer, Yarn and Akeneo's webpack build) and runs `tests/demo-check.sh` against MySQL 8.4 and Elasticsearch 8.17 service containers.
 
@@ -103,6 +127,7 @@ The bundle uses the [Supertext SDK for PHP](https://github.com/Supertext/Superte
 - **Never edit `lib/supertext-sdk/` by hand.** Fix the SDK repository (all five SDKs, see its `CLAUDE.md`), then update the copy: `scripts/vendor-sdk.sh [commit-or-branch]` (default `main`; `SDK_DIR=/path/to/clone scripts/vendor-sdk.sh` uses a local clone as it is). It replaces the folder entirely. Run the tests and commit `lib/` together with any bundle changes.
 - CI checks that the copy matches the recorded commit (it runs `scripts/vendor-sdk.sh` with the commit in `COMMIT` and fails if `lib/supertext-sdk/` changes).
 - Once the SDK is on Packagist: require `supertext/supertext-sdk`, delete `lib/` and the script, and remove the `Supertext\Sdk\` line from `autoload.psr-4`. No code changes are needed (same namespace).
+- The bundle uses the SDK's API v1 namespace `Supertext\Sdk\V1` (`Client`, `Segment`, `Languages`, `InstallationReporter`, `SupertextException`); a later API version would come as `V2` next to it. Since SDK 0.2.0 there is no `LanguageCodes` (default regions) any more: see *Language codes*.
 
 ## Demo (Railway)
 
@@ -136,6 +161,8 @@ It runs in the Railway project `supertext-cms-demos-php`, region EU West (Amster
 | `DEMO_EDITOR_EMAIL`, `DEMO_EDITOR_PASSWORD` | Editor for automated tests and screenshots: role *Catalog manager*, group *Redactor*. Akeneo has no "editor" role; *Catalog manager* is the closest built-in one and may edit products and product models in every locale (the Community Edition has no locale permissions). |
 | `SUPERTEXT_API_KEY` | Optional: without it, enter the key under System → Supertext |
 | `SUPERTEXT_API_URL` | Optional, e.g. a stand-in API |
+| `SUPERTEXT_VERSION_REPORTS` | Optional: `0` turns the version reports off (on by default; the public demo reports like any installation) |
+| `SUPERTEXT_REPORT_URL` | Tests only: a fake Commando Center, e.g. the stand-in's `http://127.0.0.1:8765/report` |
 | `PORT` | Port Apache listens on (Railway sets it) |
 
 **Elasticsearch service:** image `docker.elastic.co/elasticsearch/elasticsearch:8.17.0` with `discovery.type=single-node`, `xpack.security.enabled=false`, `indices.id_field_data.enabled=true` and `ES_JAVA_OPTS=-Xms512m -Xmx512m`. Without a volume the index is lost on restart; the entrypoint then recreates it and re-indexes the products.
@@ -165,12 +192,13 @@ The images in `docs/images/` are generated by `tests/docs/screenshots.mjs` (Play
 ```bash
 cd tests/docs && npm install && npx playwright install chromium
 npm run stand-in &
-# a fresh demo with SUPERTEXT_API_URL=http://127.0.0.1:8765/v1/, no SUPERTEXT_API_KEY and DEMO_* set, served on :8090
+# a fresh demo with SUPERTEXT_API_URL=http://127.0.0.1:8765/v1/, SUPERTEXT_REPORT_URL=http://127.0.0.1:8765/report,
+# no SUPERTEXT_API_KEY and DEMO_* set, served on :8090
 BASE_URL=http://127.0.0.1:8090 DEMO_ADMIN_EMAIL=… DEMO_ADMIN_PASSWORD=… DEMO_EDITOR_EMAIL=… DEMO_EDITOR_PASSWORD=… \
   PRODUCT_UUID=<uuid of praline-box-16> npm run screenshots
 ```
 
-The script saves a placeholder API key as the administrator first, and shows the live API address instead of the stand-in's on the settings page.
+The script saves a placeholder API key as the administrator first, and shows the live API address instead of the stand-in's on the settings page. The stand-in also answers version reports (`POST /report`, 202), so screenshots never report to the live Commando Center.
 
 ## Code quality and security checks
 
@@ -193,7 +221,7 @@ Planned: submit the package to Packagist.
 
 ## Conventions
 
-- PSR-12, PHP 8.3, strict types; keep `src/Api/` and `src/Translation/Planner.php` free of Akeneo classes (the unit tests run without Akeneo).
+- PSR-12, PHP 8.3, strict types; keep `src/Api/`, `src/Reporting/Reporting.php`, `src/Settings/Settings.php` and `src/Translation/Planner.php` free of Akeneo and Symfony classes (the unit tests run without Akeneo).
 - Supertext protocol changes go into the SDK repository, never into `lib/supertext-sdk/` (see *Supertext SDK*).
 - New settings: `src/Settings/Settings.php` (`update()` validates), `SettingsController::payload()`, `settings/SettingsPage.tsx`, all four `jsmessages` files **and** the settings table in [INSTALLATION.md](INSTALLATION.md#settings).
 - UI strings in `jsmessages.en_US.yml`, `jsmessages.de_DE.yml`, `jsmessages.fr_FR.yml` and `jsmessages.it_IT.yml`: every new string in all four (formal address: Sie, vous, Lei; Akeneo's own terms in each language, e.g. fr *locale*, *canal*, *modèle de produit*, it *impostazione locale*, *canale*, *modello di prodotto*; never translate "Supertext", placeholders or URLs). Quote YAML values that contain a colon followed by a space (French: a no-break space before `?` and `:`). New server messages get a `key` with an `error.*` text in all four files.

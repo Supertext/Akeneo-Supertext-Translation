@@ -62,6 +62,10 @@ Texts go to Supertext as one HTML document per language, and the translated valu
 | Authentication failed. Please check the Supertext API key. | The saved key is wrong or was revoked. Ask an administrator. |
 | There is no text to translate in … | The product has no text values in the language you translate from. Choose another language. |
 | Not used by the channels of these values | The product's texts belong to channels that don't have this locale. Ask an administrator to add the locale to the channel. |
+| No Supertext language: an administrator can map this locale under System → Supertext. | The locale has no Supertext language yet (Supertext uses its own codes, e.g. `es` for `es_ES`), so it can't be translated. Ask an administrator to choose one. |
+| The language … has no Supertext language yet. Ask your administrator to map it … | The same, for the language you translate from or into. Nothing was sent to Supertext. |
+| Supertext offers no formal or informal tone for this language. … | The locale's form of address is set to *Formal* or *Informal*, but Supertext doesn't offer that for this language (e.g. English). Ask an administrator to set it to *Default*. |
+| Supertext does not support this language pair (… → …). | Supertext can't translate between these two languages (for example two variants of the same language). Choose another language, or ask an administrator to check the language mapping. |
 | kept, it already has its own text | Nothing was changed in that language. Tick *Overwrite existing translations* to replace it. |
 | Akeneo did not accept the translation: … | A translated value broke one of Akeneo's rules (for example it is too long). That language was not changed; the others were saved. |
 | Too many requests to Supertext. | Supertext limits requests per second. Wait a moment and try again. |

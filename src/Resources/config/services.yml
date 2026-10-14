@@ -5,6 +5,14 @@ services:
     Supertext\AkeneoTranslationBundle\Settings\Settings:
         arguments: ['@Supertext\AkeneoTranslationBundle\Settings\SettingsRepository']
 
+    Supertext\AkeneoTranslationBundle\Reporting\Reporting:
+        arguments: ['@Supertext\AkeneoTranslationBundle\Settings\Settings']
+
+    # Public ping route for the Supertext Commando Center, and deferred version reports.
+    Supertext\AkeneoTranslationBundle\EventListener\ReportingSubscriber:
+        arguments: ['@Supertext\AkeneoTranslationBundle\Reporting\Reporting']
+        tags: [kernel.event_subscriber]
+
     Supertext\AkeneoTranslationBundle\Translation\EntityTranslator:
         arguments:
             - '@pim_catalog.repository.attribute'
@@ -28,6 +36,7 @@ services:
             - '@oro_security.security_facade'
             - '@pim_user.context.user'
             - '@logger'
+            - '@Supertext\AkeneoTranslationBundle\Reporting\Reporting'
 
     supertext_translation.controller.settings:
         class: Supertext\AkeneoTranslationBundle\Controller\SettingsController
@@ -37,14 +46,19 @@ services:
             - '@Supertext\AkeneoTranslationBundle\Translation\EntityTranslator'
             - '@oro_security.security_facade'
             - '@pim_user.context.user'
+            - '@Supertext\AkeneoTranslationBundle\Reporting\Reporting'
 
     Supertext\AkeneoTranslationBundle\Command\TranslateCommand:
         arguments:
             - '@pim_catalog.repository.product'
             - '@pim_catalog.repository.product_model'
             - '@Supertext\AkeneoTranslationBundle\Translation\EntityTranslator'
+            - '@Supertext\AkeneoTranslationBundle\Reporting\Reporting'
         tags: [{ name: console.command, command: 'supertext:translate' }]
 
     Supertext\AkeneoTranslationBundle\Command\CheckCommand:
-        arguments: ['@Supertext\AkeneoTranslationBundle\Settings\Settings']
+        arguments:
+            - '@Supertext\AkeneoTranslationBundle\Settings\Settings'
+            - '@Supertext\AkeneoTranslationBundle\Reporting\Reporting'
+            - '@Supertext\AkeneoTranslationBundle\Translation\EntityTranslator'
         tags: [{ name: console.command, command: 'supertext:check' }]

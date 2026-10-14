@@ -1,8 +1,8 @@
 import React, {useEffect, useState} from 'react';
 import styled from 'styled-components';
-import {Breadcrumb, Button, Field, Helper, Link, Locale, SectionTitle, SelectInput, Table, TextInput, getColor} from 'akeneo-design-system';
+import {Breadcrumb, Button, Checkbox, Field, Helper, Link, Locale, SectionTitle, SelectInput, Table, TextInput, getColor} from 'akeneo-design-system';
 import {PageContent, PageHeader, PimView, useRoute} from '@akeneo-pim-community/shared';
-import {ApiError, LanguageSetting, SettingsData, fetchSettings, localize, saveSettings, testConnection} from '../api';
+import {ApiError, KeyCheck, LanguageSetting, Links, SettingsData, TargetLanguage, fetchSettings, saveSettings, testConnection} from '../api';
 
 const __ = require('oro/translator');
 
@@ -14,12 +14,6 @@ const Form = styled.div`
   padding-bottom: 40px;
 `;
 
-const Row = styled.div`
-  display: flex;
-  gap: 10px;
-  align-items: center;
-`;
-
 const Note = styled.p`
   color: ${getColor('grey', 120)};
   margin: 0;
@@ -27,6 +21,40 @@ const Note = styled.p`
 
 const environments = ['live', 'staging', 'testing', 'custom'] as const;
 const politeness = ['', 'more', 'less'] as const;
+
+/** The text with "supertext.com → Integrations → API" and "supertext.com" as links (new tab), in every language. */
+const linkify = (text: string, links: Links) =>
+  text.split(/(supertext\.com → Integrations → API|supertext\.com)/).map((part, index) =>
+    part === 'supertext.com → Integrations → API' ? (
+      <Link key={index} href={links.api_key} target="_blank" rel="noopener">
+        {part}
+      </Link>
+    ) : part === 'supertext.com' ? (
+      <Link key={index} href={links.signup} target="_blank" rel="noopener">
+        {part}
+      </Link>
+    ) : (
+      part
+    )
+  );
+
+const formatTime = (value: string): string => {
+  const date = new Date(value);
+
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString();
+};
+
+/** The latest automatic API key check, with its time (keycheck.* in the four languages). */
+const KeyCheckMessage = ({check, links}: {check: KeyCheck; links: Links}) => (
+  <div className="supertext-key-check">
+    <Helper level={check.status === 'ok' ? 'success' : check.status === 'invalid' || check.status === 'missing' ? 'error' : 'warning'}>
+      {linkify(__(`supertext_translation.keycheck.${check.status}`, {status: String(check.http_status ?? '?')}), links)}{' '}
+      {__('supertext_translation.keycheck.checked_at', {time: formatTime(check.checked_at)})}
+    </Helper>
+  </div>
+);
+
+const targetLabel = (target: TargetLanguage) => `${target.name} (${target.code})`;
 
 const SettingsPage = () => {
   const systemRoute = useRoute('pim_system_index');
@@ -36,6 +64,8 @@ const SettingsPage = () => {
   const [apiUrl, setApiUrl] = useState<string>('');
   const [timeout, setTimeoutValue] = useState<string>('180');
   const [languages, setLanguages] = useState<LanguageSetting[]>([]);
+  const [versionReports, setVersionReports] = useState<boolean>(true);
+  const [keyCheck, setKeyCheck] = useState<KeyCheck | null>(null);
   const [message, setMessage] = useState<{level: 'success' | 'error' | 'info'; text: string} | null>(null);
   const [busy, setBusy] = useState<boolean>(false);
 
@@ -46,6 +76,8 @@ const SettingsPage = () => {
     setApiUrl(data.api_url);
     setTimeoutValue(String(data.timeout));
     setLanguages(data.languages);
+    setVersionReports(data.version_reports);
+    setKeyCheck(data.key_check);
   };
 
   useEffect(() => {
@@ -59,6 +91,7 @@ const SettingsPage = () => {
     environment,
     api_url: apiUrl,
     timeout: Number(timeout),
+    version_reports: versionReports,
     languages: Object.fromEntries(languages.map(language => [language.locale, {code: language.code, politeness: language.politeness}])),
   });
 
@@ -76,7 +109,10 @@ const SettingsPage = () => {
   const test = () => {
     setBusy(true);
     testConnection(input())
-      .then(result => setMessage({level: result.ok ? 'success' : 'error', text: localize(result)}))
+      .then(result => {
+        setMessage(null);
+        result.key_check !== null ? setKeyCheck(result.key_check) : setMessage({level: 'error', text: result.message});
+      })
       .catch((e: ApiError) => setMessage({level: 'error', text: e.message}))
       .finally(() => setBusy(false));
   };
@@ -85,6 +121,9 @@ const SettingsPage = () => {
     setLanguages(current => current.map(language => (language.locale === locale ? {...language, ...change} : language)));
 
   const keyFromEnvironment = settings?.api_key_source === 'environment';
+
+  /** Whether Supertext offers formal/informal for a target (a code it doesn't list: assume yes, the API decides). */
+  const supportsPoliteness = (code: string): boolean => settings?.targets.find(target => target.code === code)?.politeness ?? true;
 
   return (
     <>
@@ -111,6 +150,7 @@ const SettingsPage = () => {
       <PageContent>
         <Form className="supertext-settings">
           {message !== null && <Helper level={message.level}>{message.text}</Helper>}
+          {settings !== null && keyCheck !== null && <KeyCheckMessage check={keyCheck} links={settings.links} />}
           {settings !== null && (
             <>
               <SectionTitle>
@@ -173,6 +213,19 @@ const SettingsPage = () => {
                 <TextInput value={timeout} onChange={(value: string) => setTimeoutValue(value.replace(/[^0-9]/g, ''))} />
                 <Helper level="info">{__('supertext_translation.settings.timeout_help')}</Helper>
               </Field>
+              <div className="supertext-version-reports">
+                <Checkbox
+                  checked={settings.version_reports_from_environment ? settings.version_reports_enabled : versionReports}
+                  readOnly={settings.version_reports_from_environment}
+                  onChange={(value: boolean) => setVersionReports(value)}
+                >
+                  {__('supertext_translation.settings.version_reports')}
+                </Checkbox>
+                <Helper level="info">
+                  {__('supertext_translation.settings.version_reports_help')}
+                  {settings.version_reports_from_environment && ` ${__('supertext_translation.settings.version_reports_environment')}`}
+                </Helper>
+              </div>
 
               <SectionTitle>
                 <SectionTitle.Title>{__('supertext_translation.settings.languages')}</SectionTitle.Title>
@@ -191,18 +244,37 @@ const SettingsPage = () => {
                         <Locale code={language.locale} languageLabel={language.label} />
                       </Table.Cell>
                       <Table.Cell>
-                        <Row>
-                          <TextInput
-                            value={language.code}
-                            placeholder={language.default_code}
-                            onChange={(value: string) => updateLanguage(language.locale, {code: value})}
-                          />
-                        </Row>
+                        <SelectInput
+                          value={language.code !== '' ? language.code : null}
+                          onChange={(value: string | null) => updateLanguage(language.locale, {code: value ?? ''})}
+                          clearable={false}
+                          placeholder={__('supertext_translation.settings.choose_code')}
+                          emptyResultLabel={__('pim_common.no_result')}
+                          openLabel={__('pim_common.open')}
+                          invalid={language.code === ''}
+                        >
+                          {[
+                            ...settings.targets,
+                            ...(language.code !== '' && !settings.targets.some(target => target.code === language.code)
+                              ? [{code: language.code, name: language.code, politeness: true}]
+                              : []),
+                          ].map(target => (
+                            <SelectInput.Option key={target.code} value={target.code}>
+                              {targetLabel(target)}
+                            </SelectInput.Option>
+                          ))}
+                        </SelectInput>
+                        {language.code === '' && (
+                          <Helper inline level="warning">
+                            {__('supertext_translation.settings.not_mapped')}
+                          </Helper>
+                        )}
                       </Table.Cell>
                       <Table.Cell>
                         <SelectInput
                           value={language.politeness}
                           onChange={(value: string) => updateLanguage(language.locale, {politeness: value as LanguageSetting['politeness']})}
+                          readOnly={language.politeness === '' && !supportsPoliteness(language.code)}
                           clearable={false}
                           emptyResultLabel={__('pim_common.no_result')}
                           openLabel={__('pim_common.open')}
@@ -213,6 +285,11 @@ const SettingsPage = () => {
                             </SelectInput.Option>
                           ))}
                         </SelectInput>
+                        {language.code !== '' && !supportsPoliteness(language.code) && (
+                          <Helper inline level={language.politeness !== '' ? 'warning' : 'info'}>
+                            {__('supertext_translation.settings.no_politeness')}
+                          </Helper>
+                        )}
                       </Table.Cell>
                     </Table.Row>
                   ))}

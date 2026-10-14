@@ -10,16 +10,17 @@ declare(strict_types=1);
 
 namespace Supertext\AkeneoTranslationBundle\Api;
 
-use Supertext\Sdk\Client;
 use Supertext\Sdk\Http\HttpTransport;
-use Supertext\Sdk\Segment;
-use Supertext\Sdk\SupertextException as SdkException;
+use Supertext\Sdk\V1\Client;
+use Supertext\Sdk\V1\Segment;
+use Supertext\Sdk\V1\SupertextException as SdkException;
 
 /**
  * The bundle's access to Supertext: a thin layer over the Supertext SDK for PHP
  * (lib/supertext-sdk, https://github.com/Supertext/Supertext-API-SDK-and-Guide), which does the
- * protocol (upload, polling, download, delete), the language codes, HTML packing and the HTTP 429
- * retries. This class adds the bundle's environments and turns SDK errors into the bundle's
+ * protocol (upload, polling, download, delete), HTML packing and the HTTP 429 retries. Language
+ * codes are resolved before (Settings::languageCode(), the SDK's Languages): this class sends
+ * them as they are. This class adds the bundle's environments and turns SDK errors into the bundle's
  * SupertextException with a UI message key.
  *
  * Has no Akeneo dependencies (unit-tested with a fake transport).
@@ -105,8 +106,8 @@ final class SupertextClient
      * @template K of array-key
      *
      * @param array<K, Segment> $segments
-     * @param string            $targetLanguage Supertext target code, e.g. "de-CH" (bare codes get a default region)
-     * @param string            $sourceLanguage any form ("en_US"); sent as the bare language. Empty: auto-detect.
+     * @param string            $targetLanguage Supertext target code, e.g. "de-CH" or "es" (sent as it is)
+     * @param string            $sourceLanguage Supertext source code, e.g. "en" (sent as it is). Empty: auto-detect.
      * @param string            $politeness     "default", "more" (formal) or "less" (informal)
      *
      * @return array<K, string>

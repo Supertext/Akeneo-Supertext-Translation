@@ -11,11 +11,19 @@ declare(strict_types=1);
 namespace Supertext\AkeneoTranslationBundle\Settings;
 
 use Supertext\AkeneoTranslationBundle\Api\SupertextClient;
-use Supertext\Sdk\LanguageCodes;
+use Supertext\AkeneoTranslationBundle\Api\SupertextException;
+use Supertext\Sdk\V1\InstallationReporter;
+use Supertext\Sdk\V1\Languages;
+use Supertext\Sdk\V1\SupertextException as SdkException;
 
 /**
  * The bundle's settings: what an administrator saved under System → Supertext, with the
- * environment variables SUPERTEXT_API_KEY and SUPERTEXT_API_URL taking precedence.
+ * environment variables SUPERTEXT_API_KEY, SUPERTEXT_API_URL and SUPERTEXT_VERSION_REPORTS
+ * taking precedence.
+ *
+ * Languages follow the Supertext SDK's rules (no guessing): the locale's mapping (languages.<locale>.code)
+ * wins, else a locale that equals a Supertext code apart from case and "_"/"-" (de_CH → de-CH),
+ * else unsupported_language and nothing is sent. One mapping serves both directions.
  */
 final class Settings
 {
@@ -31,7 +39,7 @@ final class Settings
     /** @var array<string, mixed>|null */
     private ?array $stored = null;
 
-    public function __construct(private readonly SettingsRepository $repository)
+    public function __construct(private readonly SettingsStorage $repository)
     {
     }
 
@@ -107,21 +115,64 @@ final class Settings
         return $value >= 30 && $value <= 1800 ? $value : self::DEFAULT_TIMEOUT;
     }
 
-    /** Supertext target code for an Akeneo locale: the configured code, else BCP-47 with a region (de_CH -> de-CH). */
+    /**
+     * Supertext target code for an Akeneo locale: the mapping, else the exact match (de_CH → de-CH).
+     *
+     * @throws SupertextException unsupported_language (nothing may be sent)
+     */
     public function languageCode(string $locale): string
     {
-        return LanguageCodes::target($locale, [$locale => (string) ($this->languages()[$locale]['code'] ?? '')]);
+        try {
+            return Languages::target($locale, $this->mapping());
+        } catch (SdkException $e) {
+            throw SupertextException::fromSdk($e);
+        }
     }
 
-    /** Supertext source code for an Akeneo locale: the bare language of the configured code or the locale (en_US -> en). */
+    /**
+     * Supertext source code for an Akeneo locale: the mapping in its source form, else the bare language (en_US → en).
+     *
+     * @throws SupertextException unsupported_language
+     */
     public function sourceCode(string $locale): string
     {
-        return LanguageCodes::source($locale, [$locale => (string) ($this->languages()[$locale]['code'] ?? '')]);
+        try {
+            return Languages::source($locale, $this->mapping());
+        } catch (SdkException $e) {
+            throw SupertextException::fromSdk($e);
+        }
     }
 
-    public static function defaultLanguageCode(string $locale): string
+    /** The target code for a locale, or null when it has neither a mapping nor an exact match (settings page). */
+    public function languageCodeOrNull(string $locale): ?string
     {
-        return LanguageCodes::target($locale);
+        try {
+            return Languages::target($locale, $this->mapping());
+        } catch (SdkException) {
+            return null;
+        }
+    }
+
+    /** The Supertext target a locale matches without a mapping (de_CH → de-CH, es_ES → null). */
+    public static function exactLanguageCode(string $locale): ?string
+    {
+        return Languages::matchTarget($locale);
+    }
+
+    /** @return array<string, string> Akeneo locale → Supertext code, as saved */
+    public function mapping(): array
+    {
+        $mapping = [];
+
+        foreach ($this->languages() as $locale => $language) {
+            $code = trim((string) ($language['code'] ?? ''));
+
+            if ($code !== '') {
+                $mapping[(string) $locale] = $code;
+            }
+        }
+
+        return $mapping;
     }
 
     /** "more" (formal), "less" (informal) or "" (Supertext's default). */
@@ -138,6 +189,53 @@ final class Settings
         $languages = $this->stored()['languages'] ?? [];
 
         return \is_array($languages) ? $languages : [];
+    }
+
+    /** The "Send version information to Supertext" setting as saved; null when never saved (on by default). */
+    public function versionReports(): ?bool
+    {
+        $value = $this->stored()['version_reports'] ?? null;
+
+        return \is_bool($value) ? $value : null;
+    }
+
+    /** Whether SUPERTEXT_VERSION_REPORTS is set to a value that wins over the setting. */
+    public function versionReportsFromEnvironment(): bool
+    {
+        return \in_array(strtolower(self::environmentValue('SUPERTEXT_VERSION_REPORTS')), ['0', 'false', 'off', 'no', '1', 'true', 'on', 'yes'], true);
+    }
+
+    /** Whether version reports are on: SUPERTEXT_VERSION_REPORTS, else the setting, else on. */
+    public function versionReportsEnabled(): bool
+    {
+        $env = self::environmentValue('SUPERTEXT_VERSION_REPORTS');
+
+        return InstallationReporter::reportsEnabled($this->versionReports(), $env !== '' ? $env : null);
+    }
+
+    /** SUPERTEXT_REPORT_URL (tests only), else null: the SDK's default. */
+    public function reportUrl(): ?string
+    {
+        $url = self::environmentValue('SUPERTEXT_REPORT_URL');
+
+        return $url !== '' ? $url : null;
+    }
+
+    /**
+     * The site's base URL as Akeneo knows it: AKENEO_PIM_URL, else what the request was sent to
+     * ($requestUrl, scheme, host and base path), else null. No trailing slash.
+     */
+    public static function siteUrl(?string $requestUrl = null): ?string
+    {
+        foreach ([self::environmentValue('AKENEO_PIM_URL'), (string) $requestUrl] as $url) {
+            $url = rtrim(trim($url), '/');
+
+            if (preg_match('#^https?://[^/\s]+#i', $url)) {
+                return $url;
+            }
+        }
+
+        return null;
     }
 
     public function client(): SupertextClient
@@ -196,6 +294,10 @@ final class Settings
             }
         }
 
+        if (\array_key_exists('version_reports', $input)) {
+            $values['version_reports'] = (bool) $input['version_reports'];
+        }
+
         if (\is_array($input['languages'] ?? null)) {
             $languages = [];
 
@@ -207,16 +309,19 @@ final class Settings
                 $code       = trim((string) ($language['code'] ?? ''));
                 $politeness = (string) ($language['politeness'] ?? '');
 
-                if ($code !== '' && !LanguageCodes::isValid($code)) {
-                    $errors[] = ['key' => 'invalid_code', 'params' => ['code' => $code, 'locale' => $locale], 'message' => sprintf('"%s" is not a valid language code for %s (example: de-CH).', $code, $locale)];
+                // A code from Supertext's list (in its spelling), or one shaped like a language tag
+                // (sent as it is, for a language Supertext adds before the SDK lists it).
+                if ($code !== '' && !preg_match('/^[A-Za-z]{2,3}(?:[-_][A-Za-z0-9]{1,8})*$/', $code)) {
+                    $errors[] = ['key' => 'invalid_code', 'params' => ['code' => $code, 'locale' => $locale], 'message' => sprintf('"%s" is not a valid Supertext language for %s (examples: de-CH, es).', $code, $locale)];
 
                     continue;
                 }
 
                 $entry = [];
-                $code  = $code !== '' ? LanguageCodes::normalize($code) : '';
+                $code  = $code !== '' ? (Languages::matchTarget($code) ?? $code) : '';
 
-                if ($code !== '' && $code !== self::defaultLanguageCode($locale)) {
+                // The exact match applies anyway: only other choices are stored.
+                if ($code !== '' && $code !== self::exactLanguageCode($locale)) {
                     $entry['code'] = $code;
                 }
 
@@ -240,6 +345,25 @@ final class Settings
         $this->stored = $values;
 
         return [];
+    }
+
+    /** The reporter's stored state as JSON, or null (never throws). */
+    public function reporterState(): ?string
+    {
+        try {
+            return $this->repository->loadReporterState();
+        } catch (\Throwable) {
+            return null;
+        }
+    }
+
+    /** Stores the reporter's state (never throws: reporting must not break a request). */
+    public function saveReporterState(string $json): void
+    {
+        try {
+            $this->repository->saveReporterState($json);
+        } catch (\Throwable) {
+        }
     }
 
     /** @return array<string, mixed> */
