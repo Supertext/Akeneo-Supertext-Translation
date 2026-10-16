@@ -11,17 +11,22 @@ declare(strict_types=1);
 namespace Supertext\AkeneoTranslationBundle\Reporting;
 
 use Supertext\AkeneoTranslationBundle\Settings\Settings;
+use Supertext\PluginHealth\CallableKeyChecker;
+use Supertext\PluginHealth\InstallationReporter;
+use Supertext\PluginHealth\KeyCheck;
+use Supertext\PluginHealth\PingResponse;
+use Supertext\PluginHealth\ReporterResult;
+use Supertext\PluginHealth\ReporterState;
 use Supertext\Sdk\Http\HttpTransport;
-use Supertext\Sdk\V1\ApiKeyCheck;
-use Supertext\Sdk\V1\InstallationReporter;
-use Supertext\Sdk\V1\PingResponse;
-use Supertext\Sdk\V1\ReporterResult;
-use Supertext\Sdk\V1\ReporterState;
+use Supertext\Sdk\Supertext;
+use Supertext\Sdk\V1\Client;
+use Supertext\Sdk\V1\Protocol;
 
 /**
  * Version reports to the Supertext Commando Center, the automatic API key check and the
  * callback ping (Commando-Center-Supertext-Translation → docs/DEVELOPER.md → Report protocol).
- * The protocol is the SDK's InstallationReporter; this class gives it what Akeneo knows (site
+ * The protocol is Supertext Plugin Health's InstallationReporter (lib/supertext-plugin-health), with
+ * the Supertext SDK's checkApiKey() as its key check; this class gives it what Akeneo knows (site
  * URL, Akeneo and bundle versions) and keeps its state in pim_configuration
  * (row "supertext_translation_reporter", through Settings).
  *
@@ -43,18 +48,18 @@ final class Reporting
 
     /** English key check messages (console). The UI has them in four languages (keycheck.* in jsmessages). */
     public const CHECK_MESSAGES = [
-        ApiKeyCheck::OK          => 'API key checked: the connection to Supertext works.',
-        ApiKeyCheck::INVALID     => 'Supertext rejected the API key. Check that you copied the whole key, or generate a new one at supertext.com → Integrations → API (requires the Admin role). No Supertext account yet? Create one at supertext.com.',
-        ApiKeyCheck::MISSING     => 'No API key is set yet. No Supertext account yet? Create one at supertext.com. Generate your API key at supertext.com → Integrations → API (requires the Admin role).',
-        ApiKeyCheck::UNREACHABLE => "The API key couldn't be checked because Supertext can't be reached. The settings are saved; check again later.",
-        ApiKeyCheck::ERROR       => "The API key couldn't be checked: Supertext answered with an error ({status}). The settings are saved; check again later.",
+        KeyCheck::OK          => 'API key checked: the connection to Supertext works.',
+        KeyCheck::INVALID     => 'Supertext rejected the API key. Check that you copied the whole key, or generate a new one at supertext.com → Integrations → API (requires the Admin role). No Supertext account yet? Create one at supertext.com.',
+        KeyCheck::MISSING     => 'No API key is set yet. No Supertext account yet? Create one at supertext.com. Generate your API key at supertext.com → Integrations → API (requires the Admin role).',
+        KeyCheck::UNREACHABLE => "The API key couldn't be checked because Supertext can't be reached. The settings are saved; check again later.",
+        KeyCheck::ERROR       => "The API key couldn't be checked: Supertext answered with an error ({status}). The settings are saved; check again later.",
     ];
 
     /** @var list<\Closure(): void> */
     private array $deferred = [];
 
     /**
-     * @param HttpTransport|null       $transport     for tests: the key check's and the report's HTTP (default: the SDK's curl)
+     * @param HttpTransport|null       $transport     for tests: the key check's and the report's HTTP, as an SDK transport (default: curl)
      * @param string|null              $systemVersion for tests: the Akeneo version (default: from Composer)
      * @param (\Closure(): float)|null  $now           for tests: wall-clock Unix time
      */
@@ -76,7 +81,7 @@ final class Reporting
         }
     }
 
-    /** The ping route's answer (status, headers and body exactly as the SDK builds them). */
+    /** The ping route's answer (status, headers and body exactly as Plugin Health builds them). */
     public function ping(?string $challenge): PingResponse
     {
         return InstallationReporter::pingResponse($challenge, self::PLUGIN_NAME, $this->enabled());
@@ -107,26 +112,34 @@ final class Reporting
     }
 
     /**
-     * The SDK reporter for this site. Without a site URL (a console command without AKENEO_PIM_URL)
+     * Plugin Health's reporter for this site, with the SDK's key check against the chosen API. Without a site URL (a console command without AKENEO_PIM_URL)
      * reports are off, but the key check still runs.
      *
      * @param string|null $apiBaseUrl the Supertext API to check the key against (default: the configured one)
      */
     public function reporter(?string $siteUrl, ?string $apiBaseUrl = null): InstallationReporter
     {
-        $version = $this->pluginVersion ?? Settings::version();
+        $version   = $this->pluginVersion ?? Settings::version();
+        $version   = $version !== '' ? $version : 'unknown';
+        $baseUrl   = $apiBaseUrl ?? $this->settings->baseUrl();
+        $transport = $this->transport;
+        $now       = $this->now;
 
         return new InstallationReporter(
             enabled: $siteUrl !== null && $this->enabled(),
             siteUrl: (string) $siteUrl,
             pluginName: self::PLUGIN_NAME,
-            pluginVersion: $version !== '' ? $version : 'unknown',
+            pluginVersion: $version,
             systemName: self::SYSTEM_NAME,
+            keyChecker: new CallableKeyChecker(
+                static fn (#[\SensitiveParameter] string $key) => (new Client($key, baseUrl: $baseUrl, userAgent: self::PLUGIN_NAME . '/' . $version, transport: $transport, now: $now))->checkApiKey(),
+                [Protocol::class, 'apiKeyFingerprint'],
+            ),
             systemVersion: $this->systemVersion ?? self::akeneoVersion(),
+            sdkVersion: Supertext::SDK_VERSION,
             callbackUrl: $siteUrl !== null ? self::pingUrl($siteUrl) : null,
             reportUrl: $this->settings->reportUrl(),
-            transport: $this->transport,
-            apiBaseUrl: $apiBaseUrl ?? $this->settings->baseUrl(),
+            transport: $transport !== null ? new ReportTransport($transport) : null,
             now: $this->now,
         );
     }
@@ -218,7 +231,7 @@ final class Reporting
     }
 
     /** The latest stored key check (settings page), or null. */
-    public function lastCheck(): ?ApiKeyCheck
+    public function lastCheck(): ?KeyCheck
     {
         try {
             return ReporterState::from($this->settings->reporterState())->keyCheck;
@@ -228,15 +241,15 @@ final class Reporting
     }
 
     /** @return array{status: string, checked_at: string, http_status: int|null}|null for the settings page (never the fingerprint) */
-    public static function checkToArray(?ApiKeyCheck $check): ?array
+    public static function checkToArray(?KeyCheck $check): ?array
     {
         return $check === null ? null : ['status' => $check->status, 'checked_at' => $check->checkedAt, 'http_status' => $check->httpStatus];
     }
 
     /** The English message for a key check (console). */
-    public static function checkMessage(ApiKeyCheck $check): string
+    public static function checkMessage(KeyCheck $check): string
     {
-        return str_replace('{status}', (string) ($check->httpStatus ?? $check->errorCode ?? '?'), self::CHECK_MESSAGES[$check->status] ?? self::CHECK_MESSAGES[ApiKeyCheck::ERROR]);
+        return str_replace('{status}', (string) ($check->httpStatus ?? $check->errorCode ?? '?'), self::CHECK_MESSAGES[$check->status] ?? self::CHECK_MESSAGES[KeyCheck::ERROR]);
     }
 
     private function saveState(ReporterState $state): void

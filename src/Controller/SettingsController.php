@@ -16,7 +16,7 @@ use Supertext\AkeneoTranslationBundle\Api\SupertextClient;
 use Supertext\AkeneoTranslationBundle\Reporting\Reporting;
 use Supertext\AkeneoTranslationBundle\Settings\Settings;
 use Supertext\AkeneoTranslationBundle\Translation\EntityTranslator;
-use Supertext\Sdk\V1\ApiKeyCheck;
+use Supertext\PluginHealth\KeyCheck;
 use Supertext\Sdk\V1\Languages;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\HttpFoundation\Request;
@@ -93,7 +93,7 @@ final class SettingsController
         $check  = $result?->check;
 
         return new JsonResponse([
-            'ok'        => $check?->status === ApiKeyCheck::OK,
+            'ok'        => $check?->status === KeyCheck::OK,
             'key_check' => Reporting::checkToArray($check),
             'message'   => $check !== null ? Reporting::checkMessage($check) : 'The API key could not be checked.',
         ]);
@@ -106,7 +106,7 @@ final class SettingsController
     }
 
     /** @return array<string, mixed> */
-    private function payload(Request $request, ?ApiKeyCheck $check = null): array
+    private function payload(Request $request, ?KeyCheck $check = null): array
     {
         $key       = $this->settings->apiKey();
         $uiLocale  = (string) $this->userContext->getUiLocaleCode();

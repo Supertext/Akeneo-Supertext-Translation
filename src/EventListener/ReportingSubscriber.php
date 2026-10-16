@@ -49,7 +49,7 @@ final class ReportingSubscriber implements EventSubscriberInterface
 
         $challenge = $request->query->all()['challenge'] ?? null;
         $ping      = $this->reporting->ping(\is_string($challenge) ? $challenge : null);
-        // Status, headers and body as the SDK builds them (Symfony adds "private" to Cache-Control: no-store).
+        // Status, headers and body as Supertext Plugin Health builds them (Symfony adds "private" to Cache-Control: no-store).
         $event->setResponse(new Response($ping->body, $ping->status, $ping->headers));
     }
 

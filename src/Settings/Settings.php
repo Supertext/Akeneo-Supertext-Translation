@@ -12,7 +12,7 @@ namespace Supertext\AkeneoTranslationBundle\Settings;
 
 use Supertext\AkeneoTranslationBundle\Api\SupertextClient;
 use Supertext\AkeneoTranslationBundle\Api\SupertextException;
-use Supertext\Sdk\V1\InstallationReporter;
+use Supertext\PluginHealth\InstallationReporter;
 use Supertext\Sdk\V1\Languages;
 use Supertext\Sdk\V1\SupertextException as SdkException;
 

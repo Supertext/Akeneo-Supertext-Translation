@@ -15,7 +15,8 @@
     "autoload": {
         "psr-4": {
             "Supertext\\AkeneoTranslationBundle\\": "src/",
-            "Supertext\\Sdk\\": "lib/supertext-sdk/src/"
+            "Supertext\\Sdk\\": "lib/supertext-sdk/src/",
+            "Supertext\\PluginHealth\\": "lib/supertext-plugin-health/src/"
         }
     },
     "autoload-dev": {

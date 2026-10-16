@@ -30,6 +30,14 @@ jobs:
             echo "::error::lib/supertext-sdk differs from the SDK commit in lib/supertext-sdk/COMMIT: run scripts/vendor-sdk.sh <commit>"
             exit 1
           fi
+      - name: Bundled Supertext Plugin Health matches its recorded commit
+        run: |
+          scripts/vendor-plugin-health.sh "$(cat lib/supertext-plugin-health/COMMIT)"
+          if [ -n "$(git status --porcelain -- lib/supertext-plugin-health)" ]; then
+            git status --short -- lib/supertext-plugin-health
+            echo "::error::lib/supertext-plugin-health differs from the commit in lib/supertext-plugin-health/COMMIT: run scripts/vendor-plugin-health.sh <commit>"
+            exit 1
+          fi
 
   phpstan:
     name: PHPStan

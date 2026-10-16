@@ -11,9 +11,10 @@ use Supertext\AkeneoTranslationBundle\Tests\Support\MemoryStorage;
 use Supertext\Sdk\Http\HttpRequest;
 use Supertext\Sdk\Http\HttpResponse;
 use Supertext\Sdk\Http\HttpTransport;
+use Supertext\Sdk\Supertext;
 
 /**
- * The bundle's glue to the SDK's InstallationReporter: when each action runs, what is stored,
+ * The bundle's glue to Supertext Plugin Health's InstallationReporter (with the SDK's key check): when each action runs, what is stored,
  * the ping answers. A fake transport stands in for Supertext and the Commando Center.
  */
 final class ReportingTest extends TestCase
@@ -110,6 +111,8 @@ final class ReportingTest extends TestCase
         self::assertSame(['url' => self::SITE . '/supertext/ping'], $report['callback']);
         self::assertTrue($report['api_key_configured']);
         self::assertSame('ok', $report['api_key_check']['status']);
+        self::assertSame(Supertext::SDK_VERSION, $report['sdk_version']);
+        self::assertStringContainsString('Akeneo-Supertext-Translation/1.0.0', $this->requests[0]->headers['User-Agent'] ?? '', 'the key check is the SDK client\'s');
 
         $second = $reporting->run(Reporting::AFTER_SETTINGS_SAVED, self::SITE);
         self::assertSame('settings_saved', $second?->event);
@@ -120,6 +123,26 @@ final class ReportingTest extends TestCase
         }
         self::assertStringNotContainsString('secret-key-1234', (string) $storage->reporterState);
         self::assertSame('ok', $reporting->lastCheck()?->status);
+    }
+
+    public function testStateStoredByTheSdk02ReporterIsKept(): void
+    {
+        // What the Supertext SDK 0.2 reporter stored before the switch to Plugin Health.
+        $fingerprint = hash('sha256', 'key-a');
+        $storage     = new MemoryStorage(['api_key' => 'key-a'], '{"reportedVersions":"1.0.0|2026.4.0|' . PHP_VERSION . '","reportedKeyStatus":"ok","lastFailureAt":null,'
+            . '"keyCheck":{"status":"ok","checkedAt":"2026-10-13T08:00:00Z","httpStatus":200,"errorCode":null,"fingerprint":"' . $fingerprint . '"}}');
+        $reporting   = $this->reporting($storage);
+
+        self::assertSame('2026-10-13T08:00:00Z', $reporting->lastCheck()?->checkedAt);
+        self::assertNull($reporting->run(Reporting::ON_REQUEST, self::SITE)?->event, 'no new installed report after the update');
+        self::assertCount(0, $this->requests);
+
+        self::assertSame('settings_saved', $reporting->run(Reporting::AFTER_SETTINGS_SAVED, self::SITE)?->event);
+        self::assertSame(
+            ['reportedVersions', 'reportedKeyStatus', 'lastFailureAt', 'keyCheck'],
+            array_keys(json_decode((string) $storage->reporterState, true, 16, JSON_THROW_ON_ERROR)),
+            'same stored format',
+        );
     }
 
     public function testOnRequestReportsOnlyWhatChanged(): void
