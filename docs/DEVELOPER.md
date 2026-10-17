@@ -228,7 +228,7 @@ BASE_URL=http://127.0.0.1:8090 DEMO_ADMIN_EMAIL=… DEMO_ADMIN_PASSWORD=… DEMO
   PRODUCT_UUID=<uuid of praline-box-16> npm run screenshots
 ```
 
-The script saves a placeholder API key as the administrator first, and shows the live API address instead of the stand-in's on the settings page. The stand-in also answers version reports (`POST /report`, 202), so screenshots never report to the live Commando Center. The E2E workflow (see *End-to-end tests*) runs the script against a fresh demo and opens a pull request when the images changed.
+The script saves a placeholder API key as the administrator first, shows the live API address instead of the stand-in's on the settings page and a fixed time in the key check message, so the images only change when the UI does. The stand-in also answers version reports (`POST /report`, 202), so screenshots never report to the live Commando Center. The E2E workflow (see *End-to-end tests*) runs the script against a fresh demo and opens a pull request when the images changed.
 
 ## Code quality and security checks
 

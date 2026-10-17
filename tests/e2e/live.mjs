@@ -108,7 +108,12 @@ async function translateEntity(label, entity, overwrite) {
 	await menu.waitFor({ timeout: 120_000 });
 	await menu.click();
 	const action = page.locator('.supertext-translate-action');
-	if (!check(`${tag}: "Translate with Supertext" in the menu`, await action.first().isVisible().catch(() => false))) return null;
+	const shown = await action.first().waitFor({ timeout: 30_000 }).then(() => true, () => false);
+	if (!check(`${tag}: "Translate with Supertext" in the menu`, shown)) {
+		await page.screenshot({ path: `${artifacts}${label}-${entity.code}-menu.png` });
+		return null;
+	}
+	await page.waitForTimeout(300);
 	await action.first().click();
 	const modal = page.locator('.supertext-translate-modal');
 	await modal.locator('.supertext-targets, [role=alert]').first().waitFor();
