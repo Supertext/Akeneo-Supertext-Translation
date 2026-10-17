@@ -11,7 +11,7 @@ type Context = {
   configured: boolean;
   links: Links;
   source: string;
-  /** Locales without a Supertext language (no mapping under System → Supertext, no exact match). */
+  /** Locales without a Supertext language (no mapping under System → Supertext, no exact match, no default). */
   unmapped: string[];
   variant: boolean;
   locales: {code: string; label: string}[];
@@ -23,9 +23,9 @@ type ServerMessage = {message: string; key?: string; params?: {[name: string]: s
 
 type TargetResult = ServerMessage & {status: 'translated' | 'nothing' | 'error'; translated: number; existing: number};
 
-type LanguageSetting = {locale: string; label: string; code: string; exact_code: string; politeness: '' | 'more' | 'less'};
+type LanguageSetting = {locale: string; label: string; code: string; suggested_code: string; politeness: '' | 'more' | 'less'};
 
-/** A Supertext target language (the SDK's Languages::TARGETS). */
+/** A Supertext target language (the SDK's Languages::targetOptions(), name in the user's interface language). */
 type TargetLanguage = {code: string; name: string; politeness: boolean};
 
 /** The latest automatic API key check (keycheck.<status> in jsmessages). */

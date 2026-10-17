@@ -45,9 +45,9 @@ supertext_translation:
         invalid_url: L'indirizzo API deve iniziare con https://.
         missing_url: Inserisca l'indirizzo API per un ambiente personalizzato.
         invalid_timeout: Il timeout deve essere compreso tra 30 e 1800 secondi.
-        invalid_code: '«{{ code }}» non è una lingua Supertext valida per {{ locale }} (esempi: de-CH, es).'
+        invalid_code: '«{{ code }}» non è una lingua Supertext ({{ locale }}). Ne scelga una dall’elenco.'
         invalid_language_pair: 'Supertext non supporta questa combinazione di lingue ({{ source }} → {{ target }}). Verifichi l’associazione delle lingue in Sistema → Supertext.'
-        unsupported_language: 'La lingua {{ language }} non è ancora associata a una lingua Supertext. Chieda al Suo amministratore di associarla in Sistema → Supertext (Lingue).'
+        unsupported_language: 'La lingua {{ language }} non ha una lingua Supertext. Chieda al Suo amministratore di sceglierne una nell’elenco «Lingua Supertext» in Sistema → Supertext (Lingue).'
         unsupported_feature: 'Supertext non offre un tono formale o informale per questa lingua. Imposti la forma di cortesia su Predefinita in Sistema → Supertext (Lingue).'
     keycheck:
         ok: 'Chiave API verificata: la connessione a Supertext funziona.'
@@ -65,7 +65,7 @@ supertext_translation:
         not_in_channel: Non utilizzata dai canali di questi valori
         existing: Ha già un testo proprio ({{ count }} valori)
         to_translate: '{{ count }} valori da tradurre'
-        unmapped: 'Nessuna lingua Supertext: un amministratore può associare questa impostazione locale in Sistema → Supertext.'
+        unmapped: 'Nessuna lingua Supertext: un amministratore può sceglierne una per questa impostazione locale in Sistema → Supertext (Lingue).'
         overwrite: Sovrascrivi le traduzioni esistenti
         overwrite_warning: 'Il testo esistente viene sostituito in: {{ languages }}. La scheda Cronologia conserva il testo precedente.'
         translate: Traduci
@@ -97,15 +97,15 @@ supertext_translation:
         version_reports_help: 'Invia a Supertext l''URL del sito e le versioni di questo plugin, del PIM e dell''ambiente di esecuzione quando salva queste impostazioni e dopo un aggiornamento. In questo modo l''assistenza Supertext vede quale versione utilizza. Non vengono trasmessi contenuti, chiavi API né dati personali.'
         version_reports_environment: 'Su questo server è impostata la variabile d’ambiente SUPERTEXT_VERSION_REPORTS, che ha la precedenza.'
         languages: Lingue
-        languages_help: 'Scelga la lingua Supertext per ogni impostazione locale. Le impostazioni locali che corrispondono a una lingua Supertext sono precompilate (de_CH → de-CH); le altre ne richiedono una (es_ES → es, nl_NL → nl), altrimenti non possono essere tradotte.'
+        languages_help: 'Scelga la lingua Supertext per ogni impostazione locale (vale anche quando l’impostazione locale è la lingua di partenza). È preselezionata la lingua Supertext corrispondente (de_CH → de-CH) o il suo valore predefinito (de_DE → de-DE, es_ES → es, zh_TW → zh-Hant). Le impostazioni locali senza (en_IE, de_LI) mostrano «— Scegliere —» e non possono essere tradotte finché non sceglie una lingua.'
         locale: Impostazione locale
         code: 'Lingua Supertext'
         politeness: Forma di cortesia
         politeness_default: Predefinita
         politeness_more: Formale (Lei)
         politeness_less: Informale (tu)
-        choose_code: 'Scegliere una lingua Supertext'
-        not_mapped: 'Non associata: scelga una lingua Supertext'
+        choose_code: '— Scegliere —'
+        not_mapped: 'Nessun valore predefinito per questa impostazione locale: scelga una lingua Supertext'
         no_politeness: 'Supertext non offre una scelta formale/informale per questa lingua'
         test: Verifica connessione
         saved: Impostazioni salvate.
