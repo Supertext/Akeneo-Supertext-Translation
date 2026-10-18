@@ -49,6 +49,14 @@ supertext_translation:
         invalid_language_pair: 'Supertext non supporta questa combinazione di lingue ({{ source }} → {{ target }}). Verifichi l’associazione delle lingue in Sistema → Supertext.'
         unsupported_language: 'La lingua {{ language }} non ha una lingua Supertext. Chieda al Suo amministratore di sceglierne una nell’elenco «Lingua Supertext» in Sistema → Supertext (Lingue).'
         unsupported_feature: 'Supertext non offre un tono formale o informale per questa lingua. Imposti la forma di cortesia su Predefinita in Sistema → Supertext (Lingue).'
+        file_invalid: 'Questo file non è un file di traduzione XLIFF o HTML valido.'
+        file_missing_metadata: 'Questo file non è stato esportato dal bundle Supertext oppure la sua intestazione è stata rimossa.'
+        file_too_large: 'Il file è troppo grande (al massimo 10 MB).'
+        file_nothing: 'Niente da tradurre.'
+        file_other_system: 'Questo file appartiene a un altro sistema ({{ plugin }}).'
+        file_not_found: 'Il prodotto da cui è stato esportato questo file non esiste più.'
+        file_no_language: 'Il PIM non ha l’impostazione locale attivata {{ language }}.'
+        file_html_one: 'Un file HTML contiene esattamente una lingua di destinazione.'
     keycheck:
         ok: 'Chiave API verificata: la connessione a Supertext funziona.'
         invalid: 'Supertext ha rifiutato la chiave API. Verifichi di aver copiato l''intera chiave oppure ne generi una nuova su supertext.com → Integrations → API (richiede il ruolo Admin). Non ha ancora un account Supertext? Ne crei uno su supertext.com.'
@@ -111,3 +119,20 @@ supertext_translation:
         saved: Impostazioni salvate.
         version: Supertext Translation per Akeneo PIM, versione
         version_unknown: sconosciuta
+    files:
+        export_action: 'Esporta per la traduzione'
+        import_action: 'Importa traduzione'
+        format: 'Formato del file'
+        xliff: 'XLIFF 1.2 (per strumenti di traduzione)'
+        html: 'HTML (una lingua per file)'
+        download: 'Scarica il file'
+        file: 'File tradotto (XLIFF o HTML)'
+        include_changed: 'Importa anche i testi il cui testo di partenza è cambiato dopo l’esportazione'
+        nothing: 'Niente da tradurre.'
+        summary:
+            ok: 'Importati: {{ count }}'
+            existing: 'Mantenuti, hanno già un proprio testo: {{ count }}'
+            changed: 'Saltati, testo di partenza modificato dopo l’esportazione: {{ count }}'
+            untranslated: 'Non tradotti nel file: {{ count }}'
+            invalid: 'Formattazione modificata, non importati: {{ count }}'
+            missing: 'Non presenti nel file: {{ count }}'

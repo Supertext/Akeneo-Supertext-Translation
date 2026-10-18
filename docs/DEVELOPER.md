@@ -18,12 +18,15 @@ A Symfony bundle for Akeneo PIM Community Edition 2026 (Symfony 5.4, PHP 8.3). C
 | `src/Translation/Planner.php`, `TextUnit.php` | Which source values go into which target locale (channels, locale-specific attributes, existing text). No Akeneo classes. |
 | `src/Translation/EntityTranslator.php` | Collects a product's or product model's text values, translates them per target locale and applies them with Akeneo's updater, validator and saver. |
 | `src/Controller/TranslateController.php` | Internal API for the dialog: `GET /supertext/rest/{product\|product_model}/{id}` (languages, preview) and `POST …/translate`. |
+| `src/Controller/TranslationFileController.php` | Internal API for *Export for translation* / *Import translation*: `POST /supertext/rest/{product\|product_model}/{id}/export` (JSON → the file as an attachment) and `POST /supertext/rest/import` (multipart: `file`, `include_changed`, `overwrite` → a summary per job). See *Translation files*. |
+| `src/Translation/TranslationFileGlue.php`, `TranslationFileStore.php`, `TranslationFileError.php` | Export/import with the SDK's `TranslationFiles`, no Akeneo or Symfony classes (unit-tested with a fake store): jobs, reference, language codes, checks per imported job, counts. |
+| `src/Translation/AkeneoTranslationFileStore.php` | The Akeneo side: entities by UUID/id, the ACLs, `EntityTranslator::fileUnits()` and `importTexts()`. |
 | `src/Controller/SettingsController.php` | Internal API for System → Supertext: `GET`/`POST /supertext/rest/settings`, `POST …/settings/test`. Never returns the key. |
 | `src/Command/TranslateCommand.php`, `CheckCommand.php` | `supertext:translate`, `supertext:check`. |
 | `src/Resources/config/services.yml`, `routing.yml` | Services (explicit Akeneo service ids) and routes (exposed to FOSJsRouting for the front end). |
 | `src/Resources/config/form_extensions/supertext.yml` | Akeneo form extensions: the entry in the "…" menu (`secondary-actions`) of the product and product model edit forms, and the System menu item. |
 | `src/Resources/config/requirejs.yml` | Module aliases and the controller for the route `supertext_translation_settings_index`. |
-| `src/Resources/public/js/` | Front end (TypeScript/React, built by Akeneo's webpack): `product/translate-action.tsx` (Backbone view for the menu entry), `product/TranslateModal.tsx`, `settings/` (System → Supertext), `api.ts`. |
+| `src/Resources/public/js/` | Front end (TypeScript/React, built by Akeneo's webpack): `product/translate-action.tsx` (Backbone view for the menu entry), `product/TranslateModal.tsx`, `product/files-action.tsx` and `product/FilesModal.tsx` (*Export for translation* / *Import translation*), `settings/` (System → Supertext), `api.ts`. |
 | `src/Resources/translations/jsmessages.{en_US,de_DE,fr_FR,it_IT}.yml` | UI strings (English, German, French, Italian), loaded by Akeneo's `oro/translator` in the user's UI locale. Console messages and logs are English. |
 
 How Akeneo picks up the front end: `bin/console pim:installer:assets` copies `Resources/public` to `public/bundles/supertexttranslation/`, dumps the routes and translations; `yarn run webpack` compiles every `.ts`/`.tsx` under `public/bundles` (with Akeneo's `transpileOnly` TypeScript loader); `yarn run update-extensions` merges all bundles' `form_extensions/*.yml` into `public/js/extensions.json`. That's why installing or updating the bundle needs a front-end rebuild.
@@ -44,6 +47,14 @@ Keep these in sync with *What is translated* in [USER_GUIDE.md](USER_GUIDE.md#wh
 - Scopable values go into the locales of their channel; non-scopable ones into any activated locale; locale-specific attributes only into their locales (`Planner`).
 - A target value with text (after removing tags and whitespace) is kept unless *overwrite* is set.
 - Plain-text translations longer than the attribute's *max characters* are skipped with a message; Akeneo's validator catches the rest.
+
+### Translation files (XLIFF and HTML)
+
+*Export for translation* and *Import translation* use the SDK's `TranslationFiles` (SDK 0.5.0, `Supertext\Sdk\Files`; integration guide → *Translation files: XLIFF and HTML*). Nothing calls the API.
+
+- **Segments:** `EntityTranslator::fileUnits()` — the units `translate()` would send for the target locale with *overwrite* (`Planner::plan(…, overwrite: true)`), keyed by `TextUnit::key()` (`<attribute>|<channel or empty>`), rich text as HTML, plain text as text.
+- **Job metadata:** `plugin` = `Akeneo-Supertext-Translation`; `reference` = `<product|product_model>:<uuid or id>:<source locale>:<target locale>` (e.g. `product:0a1b…:en_US:de_CH`; the source locale is part of it because Akeneo has no fixed source language and the import has to collect the same locale's values again; anything else is *not found*); `sourceLanguage` = `Settings::sourceCode()`, `targetLanguage` = `Settings::languageCodeOrNull()` (the mapping, an exact match, the SDK default), else the locale with `-` for `_` (`en_IE` → `en-IE`), so unmapped locales don't block an export. File names `akeneo-<id>-<target code>.xlf` / `.html`, `akeneo-<id>.xlf` for several locales.
+- **Import:** the controller refuses uploads over 10 MB (`TranslationFileGlue::MAX_UPLOAD_BYTES`, also PHP's own `UPLOAD_ERR_INI_SIZE`) before reading and parses the temporary upload in memory; `TranslationFiles::read()`; per job: `plugin` must be ours (*other system*), the reference must parse, the user must have the type's ACL (`forbidden_<type>`), the entity must exist (*not found*), both locales must be activated (*no language*); then `importTranslations()` with `fileUnits()` collected again. `ok` texts (and `source_changed` with *include changed*) go to `EntityTranslator::importTexts()`: `Planner::plan()` with the editor's *overwrite* (values with text are kept and counted as `existing`), then `applyTexts()` — the write-back API translations use (empty and too-long texts skipped, Akeneo's updater, previous values back on violations) — and the saver. `untranslated`, `invalid_markup` and `missing` are only counted. Errors carry a `key` (`supertext_translation.error.file_*`) like the other server messages.
 
 ## Supertext API protocol
 
@@ -114,17 +125,17 @@ PHP changes need `rm -rf var/cache`; translation changes need `bin/console pim:i
 ## Tests
 
 ```bash
-phpunit                                                     # unit tests (src/Api with the SDK, Settings, Reporting, Planner, translation files)
+phpunit                                                     # unit tests (src/Api with the SDK, Settings, Reporting, Planner, interface translations, export/import glue)
 find src tests demo/project/supertext-demo -name '*.php' -print0 | xargs -0 -n1 php -l
 ```
 
-The unit tests need only PHPUnit 11 (no Akeneo install). `tests/unit/SettingsTest.php` covers the language mapping (exact match, SDK defaults, no guessing without a default, mapping for target and source, politeness only where offered, saving and validation, localized target names) and the reporting setting; `tests/unit/ReportingTest.php` the reporter glue with a fake transport for Supertext and the center (when each action reports, failures and the one-hour backoff, reports off, state without the key, state stored by the SDK 0.2 reporter, ping answers); `tests/Support/MemoryStorage.php` replaces the database. `tests/demo-check.sh` is the end-to-end test: it starts the demo image twice against MySQL and Elasticsearch with the stand-in API, checks the demo accounts (created once, passwords never logged), translates the sample product and product model with `supertext:translate`, checking the stored values, calls the public ping route and checks that the stand-in's fake Commando Center received an `installed` and a `check` report (`SUPERTEXT_REPORT_URL=http://127.0.0.1:8765/report`), without the API key.
+The unit tests need only PHPUnit 11 (no Akeneo install). `tests/unit/SettingsTest.php` covers the language mapping (exact match, SDK defaults, no guessing without a default, mapping for target and source, politeness only where offered, saving and validation, localized target names) and the reporting setting; `tests/unit/ReportingTest.php` the reporter glue with a fake transport for Supertext and the center (when each action reports, failures and the one-hour backoff, reports off, state without the key, state stored by the SDK 0.2 reporter, ping answers); `tests/unit/FileExportImportTest.php` the export/import glue with a fake store (reference round trip, the translator's keys and the language mapping in the jobs, other plugin / unknown reference / missing locale / no permission, `ok` written, `source_changed` only with the option, existing values kept unless overwriting, untranslated / invalid / missing not written, files over 10 MB refused); `tests/Support/MemoryStorage.php` replaces the database. `tests/demo-check.sh` is the end-to-end test: it starts the demo image twice against MySQL and Elasticsearch with the stand-in API, checks the demo accounts (created once, passwords never logged), translates the sample product and product model with `supertext:translate`, checking the stored values, calls the public ping route and checks that the stand-in's fake Commando Center received an `installed` and a `check` report (`SUPERTEXT_REPORT_URL=http://127.0.0.1:8765/report`), without the API key.
 
 **CI** (`.github/workflows/ci.yml`): lint and unit tests on every push; the `phpstan` job runs PHPStan (see *Code quality and security checks*); the `demo` job builds the demo image (about 20 minutes: Composer, Yarn and Akeneo's webpack build) and runs `tests/demo-check.sh` against MySQL 8.4 and Elasticsearch 8.17 service containers.
 
 ## Supertext SDK
 
-The bundle uses the [Supertext SDK for PHP](https://github.com/Supertext/Supertext-API-SDK-and-Guide/tree/main/sdk/php) for everything that talks to Supertext. The SDK isn't on Packagist yet, so `lib/supertext-sdk/` holds a copy of its `sdk/php/src` and `autoload.php` (namespace `Supertext\Sdk`, unchanged), mapped in the bundle's `composer.json` (`autoload.psr-4`). `lib/supertext-sdk/COMMIT` records the SDK commit, `README.md` says where it comes from.
+The bundle uses the [Supertext SDK for PHP](https://github.com/Supertext/Supertext-API-SDK-and-Guide/tree/main/sdk/php) for everything that talks to Supertext. The SDK isn't on Packagist yet, so `lib/supertext-sdk/` holds a copy of its `sdk/php/src` and `autoload.php` (namespace `Supertext\Sdk`, unchanged), mapped in the bundle's `composer.json` (`autoload.psr-4`). `lib/supertext-sdk/COMMIT` records the SDK commit, `VERSION` its version (0.5.0), `README.md` says where it comes from.
 
 - **Never edit `lib/supertext-sdk/` by hand.** Fix the SDK repository (all five SDKs, see its `CLAUDE.md`), then update the copy: `scripts/vendor-sdk.sh [commit-or-branch]` (default `main`; `SDK_DIR=/path/to/clone scripts/vendor-sdk.sh` uses a local clone as it is). It replaces the folder entirely. Run the tests and commit `lib/` together with any bundle changes.
 - CI checks that the copy matches the recorded commit (it runs `scripts/vendor-sdk.sh` with the commit in `COMMIT` and fails if `lib/supertext-sdk/` changes).
@@ -241,6 +252,7 @@ Planned: submit the package to Packagist.
 
 ## Known limitations / roadmap
 
+- Export for translation / import translation: one product or product model per export from the edit form (no grid mass action yet), and the demo check doesn't run an export → import round trip (it would need a logged-in session).
 - One product or product model at a time from the edit form, inside the editor's request (one locale after the other, up to *Timeout* each). Bulk translation from the product grid (a mass action running as a background job) is planned; until then, use `supertext:translate` with several identifiers.
 - Only text and text area attributes. Not yet: table attributes, attribute option labels, asset and reference entity texts (Enterprise Edition), category and attribute labels.
 - Community Edition only; Enterprise Edition's locale and category permissions are not checked yet.

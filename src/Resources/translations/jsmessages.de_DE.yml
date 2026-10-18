@@ -49,6 +49,14 @@ supertext_translation:
         invalid_language_pair: 'Supertext unterstützt dieses Sprachpaar nicht ({{ source }} → {{ target }}). Prüfen Sie die Sprachzuordnung unter System → Supertext.'
         unsupported_language: 'Die Sprache {{ language }} hat keine Supertext-Sprache. Bitten Sie Ihre Administratorin oder Ihren Administrator, unter System → Supertext (Sprachen) in der Auswahl «Supertext-Sprache» eine zu wählen.'
         unsupported_feature: 'Supertext bietet für diese Sprache keine formelle oder informelle Anrede an. Stellen Sie die Anrede unter System → Supertext (Sprachen) auf Standard.'
+        file_invalid: 'Diese Datei ist keine gültige XLIFF- oder HTML-Übersetzungsdatei.'
+        file_missing_metadata: 'Diese Datei wurde nicht vom Supertext-Bundle exportiert, oder ihr Kopfbereich wurde entfernt.'
+        file_too_large: 'Die Datei ist zu gross (höchstens 10 MB).'
+        file_nothing: 'Nichts zu übersetzen.'
+        file_other_system: 'Diese Datei gehört zu einem anderen System ({{ plugin }}).'
+        file_not_found: 'Das Produkt, aus dem diese Datei exportiert wurde, existiert nicht mehr.'
+        file_no_language: 'Das PIM hat kein aktiviertes Gebietsschema {{ language }}.'
+        file_html_one: 'Eine HTML-Datei enthält genau eine Zielsprache.'
     keycheck:
         ok: 'API-Schlüssel geprüft: Die Verbindung zu Supertext funktioniert.'
         invalid: 'Supertext hat den API-Schlüssel abgelehnt. Prüfen Sie, ob Sie den ganzen Schlüssel kopiert haben, oder erstellen Sie einen neuen unter supertext.com → Integrations → API (erfordert die Rolle Admin). Noch kein Supertext-Konto? Erstellen Sie eines auf supertext.com.'
@@ -111,3 +119,20 @@ supertext_translation:
         saved: Einstellungen gespeichert.
         version: "Supertext Translation für Akeneo PIM, Version"
         version_unknown: unbekannt
+    files:
+        export_action: 'Für Übersetzung exportieren'
+        import_action: 'Übersetzung importieren'
+        format: 'Dateiformat'
+        xliff: 'XLIFF 1.2 (für Übersetzungstools)'
+        html: 'HTML (eine Sprache pro Datei)'
+        download: 'Datei herunterladen'
+        file: 'Übersetzte Datei (XLIFF oder HTML)'
+        include_changed: 'Auch Texte importieren, deren Ausgangstext sich seit dem Export geändert hat'
+        nothing: 'Nichts zu übersetzen.'
+        summary:
+            ok: 'Importiert: {{ count }}'
+            existing: 'Beibehalten, hat bereits einen eigenen Text: {{ count }}'
+            changed: 'Übersprungen, Ausgangstext seit dem Export geändert: {{ count }}'
+            untranslated: 'In der Datei nicht übersetzt: {{ count }}'
+            invalid: 'Formatierung verändert, nicht importiert: {{ count }}'
+            missing: 'Nicht in der Datei: {{ count }}'

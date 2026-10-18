@@ -49,6 +49,14 @@ supertext_translation:
         invalid_language_pair: 'Supertext does not support this language pair ({{ source }} → {{ target }}). Check the language mapping under System → Supertext.'
         unsupported_language: 'The language {{ language }} has no Supertext language. Ask your administrator to choose one in the "Supertext language" drop-down under System → Supertext (Languages).'
         unsupported_feature: 'Supertext offers no formal or informal tone for this language. Set the form of address to Default under System → Supertext (Languages).'
+        file_invalid: 'This file isn''t a valid XLIFF or HTML translation file.'
+        file_missing_metadata: 'This file wasn''t exported by the Supertext bundle, or its header was removed.'
+        file_too_large: 'The file is too large (at most 10 MB).'
+        file_nothing: 'Nothing to translate.'
+        file_other_system: 'This file belongs to another system ({{ plugin }}).'
+        file_not_found: 'The product this file was exported from no longer exists.'
+        file_no_language: 'The PIM has no activated locale {{ language }}.'
+        file_html_one: 'An HTML file holds exactly one target language.'
     keycheck:
         ok: 'API key checked: the connection to Supertext works.'
         invalid: 'Supertext rejected the API key. Check that you copied the whole key, or generate a new one at supertext.com → Integrations → API (requires the Admin role). No Supertext account yet? Create one at supertext.com.'
@@ -111,3 +119,20 @@ supertext_translation:
         saved: Settings saved.
         version: "Supertext Translation for Akeneo PIM, version"
         version_unknown: unknown
+    files:
+        export_action: 'Export for translation'
+        import_action: 'Import translation'
+        format: 'File format'
+        xliff: 'XLIFF 1.2 (for translation tools)'
+        html: 'HTML (one language per file)'
+        download: 'Download file'
+        file: 'Translated file (XLIFF or HTML)'
+        include_changed: 'Also import texts whose source changed since the export'
+        nothing: 'Nothing to translate.'
+        summary:
+            ok: 'Imported: {{ count }}'
+            existing: 'Kept, already has its own text: {{ count }}'
+            changed: 'Skipped, source changed since the export: {{ count }}'
+            untranslated: 'Not translated in the file: {{ count }}'
+            invalid: 'Formatting changed, not imported: {{ count }}'
+            missing: 'Not in the file: {{ count }}'

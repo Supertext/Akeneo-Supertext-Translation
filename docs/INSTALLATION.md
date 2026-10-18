@@ -124,7 +124,7 @@ Localizable **text** and **text area** attributes, rich text included (headings,
 
 ## Interface languages
 
-The bundle's screens (the *Translate with Supertext* dialog, System → Supertext and their messages) are available in English, German, French and Italian. They follow each user's Akeneo interface language: the *UI locale* in the user's own settings (user menu → *My settings*). Other UI locales show the English texts. Console commands and log entries stay English.
+The bundle's screens (the *Translate with Supertext*, *Export for translation* and *Import translation* dialogs, System → Supertext and their messages) are available in English, German, French and Italian. They follow each user's Akeneo interface language: the *UI locale* in the user's own settings (user menu → *My settings*). Other UI locales show the English texts. Console commands and log entries stay English.
 
 ## Permissions
 
@@ -132,7 +132,10 @@ The bundle's screens (the *Translate with Supertext* dialog, System → Supertex
 | --- | --- |
 | Translate a product | *Products → Edit attributes of a product* |
 | Translate a product model | *Product models → Edit attributes of a product model* |
+| Export for translation, Import translation | The same as translating the product or product model |
 | System → Supertext (API key and languages) | *System configuration* (the same permission as System → Configuration) |
+
+*Export for translation* and *Import translation* need the same permission as translating (*Edit attributes* of a product or product model, for every product a file holds). There is nothing to configure for them and no API key is needed (nothing is sent to Supertext). Uploads larger than 10 MB are refused before they are read (PHP's `upload_max_filesize` and `post_max_size` must allow the file too); files are parsed in memory and never stored.
 
 There is no separate permission for translating: whoever may edit a product's attributes may translate it. In a new Akeneo installation every role has all permissions; remove *System configuration* from the roles that shouldn't see the API settings.
 

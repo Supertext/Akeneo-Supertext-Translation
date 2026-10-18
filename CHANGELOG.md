@@ -4,6 +4,9 @@ All notable changes to Supertext Translation for Akeneo PIM.
 
 ## Unreleased
 
+### Added
+- **Export for translation (XLIFF 1.2 or HTML) and import of translated files; Supertext SDK 0.5.0.** Two new entries in the "…" menu of the product and product model edit forms: *Export for translation* (language to translate from, file format, target locales; downloads `akeneo-<id>-<language>.xlf` or `.html`) for a translation tool, a translator or Supertext's web app, and *Import translation* (upload, then a summary per product and locale: imported, kept because the value already has its own text, skipped because the source changed since the export, not translated, formatting changed, not in the file). Imported texts are saved like translations from Supertext (existing values kept unless *Overwrite existing translations*, Akeneo's validation and history). Same permissions as translating; files up to 10 MB. In English, German, French and Italian.
+
 ### Changed
 - **Languages: defaults where they are obvious** (Supertext SDK 0.4.0). A locale nobody mapped now uses its default instead of failing: `es_ES` → `es`, `nl_NL` → `nl`, `zh_CN` → `zh-Hans`, `zh_TW` → `zh-Hant`, bare `de` → `de-DE`. System → Supertext → Languages preselects each locale's drop-down with its exact match or default, shows the names in your interface language, and stores the language you save for every locale. Only locales without a default (e.g. `en_IE`, `de_LI`) show *— Choose —* and can't be translated until a language is chosen. Saved languages are kept as they are.
 - The *Form of address* choice is shown only for languages that offer it; a *Formal*/*Informal* saved earlier for another language is no longer sent (it made the translation fail).

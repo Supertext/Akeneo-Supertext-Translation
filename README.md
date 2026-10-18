@@ -8,8 +8,9 @@ Open a product, choose **… → Translate with Supertext**, tick the locales an
 - Products, product models and variants; values per channel go into that channel's locales
 - Locales with their own text are kept unless the editor explicitly overwrites them
 - **System → Supertext**: API key (or `SUPERTEXT_API_KEY`) with an automatic key check and *Test connection*, the Supertext language and formal or informal form of address per locale, and *Send version information to Supertext*
+- **Export for translation / Import translation** in the same menu: XLIFF 1.2 or HTML files for translation tools, translators or Supertext's web app, imported back with a summary per locale
 - Akeneo permissions apply; console commands `supertext:translate` and `supertext:check` for scripts and bulk runs
-- English and German interface
+- English, German, French and Italian interface
 
 ![The Translate with Supertext dialog on a product](docs/images/02-translate-dialog.png)
 

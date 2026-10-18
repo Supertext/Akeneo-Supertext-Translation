@@ -49,6 +49,14 @@ supertext_translation:
         invalid_language_pair: 'Supertext ne prend pas en charge cette paire de langues ({{ source }} → {{ target }}). Vérifiez l’association des langues sous Système → Supertext.'
         unsupported_language: 'La langue {{ language }} n’a pas de langue Supertext. Demandez à votre administrateur d’en choisir une dans la liste « Langue Supertext » sous Système → Supertext (Langues).'
         unsupported_feature: 'Supertext ne propose pas de ton formel ou informel pour cette langue. Choisissez la forme d’adresse Par défaut sous Système → Supertext (Langues).'
+        file_invalid: 'Ce fichier n’est pas un fichier de traduction XLIFF ou HTML valide.'
+        file_missing_metadata: 'Ce fichier n’a pas été exporté par le bundle Supertext, ou son en-tête a été supprimé.'
+        file_too_large: 'Le fichier est trop volumineux (10 Mo au maximum).'
+        file_nothing: 'Rien à traduire.'
+        file_other_system: 'Ce fichier appartient à un autre système ({{ plugin }}).'
+        file_not_found: 'Le produit à partir duquel ce fichier a été exporté n’existe plus.'
+        file_no_language: 'Le PIM n’a pas de locale activée {{ language }}.'
+        file_html_one: 'Un fichier HTML contient exactement une langue cible.'
     keycheck:
         ok: 'Clé API vérifiée : la connexion à Supertext fonctionne.'
         invalid: 'Supertext a refusé la clé API. Vérifiez que vous avez copié la clé entière ou générez-en une nouvelle sur supertext.com → Integrations → API (rôle Admin requis). Pas encore de compte Supertext ? Créez-en un sur supertext.com.'
@@ -111,3 +119,20 @@ supertext_translation:
         saved: Paramètres enregistrés.
         version: Supertext Translation pour Akeneo PIM, version
         version_unknown: inconnue
+    files:
+        export_action: 'Exporter pour traduction'
+        import_action: 'Importer une traduction'
+        format: 'Format de fichier'
+        xliff: 'XLIFF 1.2 (pour les outils de traduction)'
+        html: 'HTML (une langue par fichier)'
+        download: 'Télécharger le fichier'
+        file: 'Fichier traduit (XLIFF ou HTML)'
+        include_changed: 'Importer aussi les textes dont la source a changé depuis l’export'
+        nothing: 'Rien à traduire.'
+        summary:
+            ok: 'Importés : {{ count }}'
+            existing: 'Conservés, ont déjà leur propre texte : {{ count }}'
+            changed: 'Ignorés, source modifiée depuis l’export : {{ count }}'
+            untranslated: 'Non traduits dans le fichier : {{ count }}'
+            invalid: 'Mise en forme modifiée, non importés : {{ count }}'
+            missing: 'Absents du fichier : {{ count }}'
