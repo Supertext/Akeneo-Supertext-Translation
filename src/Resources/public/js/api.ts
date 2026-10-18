@@ -23,7 +23,7 @@ type ServerMessage = {message: string; key?: string; params?: {[name: string]: s
 
 type TargetResult = ServerMessage & {status: 'translated' | 'nothing' | 'error'; translated: number; existing: number};
 
-type LanguageSetting = {locale: string; label: string; code: string; suggested_code: string; politeness: '' | 'more' | 'less'};
+type LanguageSetting = {locale: string; label: string; code: string; suggested_code: string; politeness: '' | 'more' | 'less'; review: boolean};
 
 /** A Supertext target language (the SDK's Languages::targetOptions(), name in the user's interface language). */
 type TargetLanguage = {code: string; name: string; politeness: boolean};
@@ -40,6 +40,8 @@ type SettingsData = {
   api_url: string;
   api_url_from_environment: boolean;
   effective_url: string;
+  /** The review service for locales with Translation review ('' = off for every locale). */
+  review_url: string;
   timeout: number;
   languages: LanguageSetting[];
   targets: TargetLanguage[];

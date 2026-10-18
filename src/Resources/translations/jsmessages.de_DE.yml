@@ -115,6 +115,10 @@ supertext_translation:
         choose_code: '— Wählen —'
         not_mapped: 'Kein Standard für dieses Gebietsschema: Wählen Sie eine Supertext-Sprache'
         no_politeness: 'Supertext bietet für diese Sprache keine formelle/informelle Anrede an'
+        review: Übersetzungsprüfung
+        review_label: 'Übersetzungsprüfung für {{ language }}'
+        review_help: 'Übersetzungsprüfung: Übersetzungen in ein Gebietsschema mit diesem Häkchen laufen über den Prüfdienst von Supertext, damit Prüferinnen und Prüfer sie mit der Erweiterung Supertext Localization Review direkt auf der Website kontrollieren und korrigieren können. Ihre Korrekturen werden beim nächsten Übersetzen des Produkts übernommen.'
+        review_off: 'Die Umgebungsvariable SUPERTEXT_REVIEW_URL ist auf diesem Server leer: Die Übersetzungsprüfung ist für alle Gebietsschemas ausgeschaltet.'
         test: Verbindung testen
         saved: Einstellungen gespeichert.
         version: "Supertext Translation für Akeneo PIM, Version"

@@ -115,6 +115,10 @@ supertext_translation:
         choose_code: '— Choose —'
         not_mapped: 'No default for this locale: choose a Supertext language'
         no_politeness: 'Supertext offers no formal/informal choice for this language'
+        review: Translation review
+        review_label: 'Translation review for {{ language }}'
+        review_help: 'Translation review: translations into a locale with this box ticked go through Supertext''s review service, so reviewers can check and correct them on the website with the Supertext Localization Review extension. Their corrections are used the next time the product is translated.'
+        review_off: 'The SUPERTEXT_REVIEW_URL environment variable is empty on this server: Translation review is off for every locale.'
         test: Test connection
         saved: Settings saved.
         version: "Supertext Translation for Akeneo PIM, version"

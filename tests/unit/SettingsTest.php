@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace Supertext\AkeneoTranslationBundle\Tests\Unit;
 
 use PHPUnit\Framework\TestCase;
+use Supertext\AkeneoTranslationBundle\Api\SupertextClient;
 use Supertext\AkeneoTranslationBundle\Api\SupertextException;
 use Supertext\AkeneoTranslationBundle\Settings\Settings;
 use Supertext\AkeneoTranslationBundle\Tests\Support\MemoryStorage;
@@ -12,7 +13,7 @@ use Supertext\AkeneoTranslationBundle\Tests\Support\MemoryStorage;
 /** Language mapping (mapping, exact match, SDK default), the version reports setting and the site URL. */
 final class SettingsTest extends TestCase
 {
-    private const ENV = ['SUPERTEXT_VERSION_REPORTS', 'AKENEO_PIM_URL', 'SUPERTEXT_API_KEY'];
+    private const ENV = ['SUPERTEXT_VERSION_REPORTS', 'AKENEO_PIM_URL', 'SUPERTEXT_API_KEY', 'SUPERTEXT_REVIEW_URL'];
 
     protected function tearDown(): void
     {
@@ -117,6 +118,47 @@ final class SettingsTest extends TestCase
             self::assertSame('invalid_code', $errors[0]['key'], $code);
             self::assertSame(['code' => $code, 'locale' => 'de_CH'], $errors[0]['params']);
         }
+    }
+
+    public function testTranslationReviewPerLocale(): void
+    {
+        $storage  = new MemoryStorage();
+        $settings = new Settings($storage);
+
+        self::assertFalse($settings->review('de_CH'), 'off by default');
+        self::assertSame([], $settings->update(['languages' => [
+            'de_CH' => ['code' => 'de-CH', 'review' => true],
+            'fr_FR' => ['code' => 'fr-FR', 'review' => false],
+            'it_IT' => ['review' => true],                    // the preselected suggestion, review on
+        ]]));
+
+        self::assertSame([
+            'de_CH' => ['code' => 'de-CH', 'review' => true],
+            'fr_FR' => ['code' => 'fr-FR'],
+            'it_IT' => ['review' => true],
+        ], $storage->values['languages']);
+        self::assertTrue($settings->review('de_CH'));
+        self::assertFalse($settings->review('fr_FR'));
+        self::assertTrue($settings->review('it_IT'));
+        self::assertSame('it-IT', $settings->languageCode('it_IT'));
+    }
+
+    public function testReviewUrlDefaultsToSupertextsReviewService(): void
+    {
+        $settings = new Settings(new MemoryStorage());
+
+        self::assertSame(SupertextClient::REVIEW_URL, $settings->reviewUrl());
+        self::assertSame('https://localizationreview-production.up.railway.app/v1/', SupertextClient::REVIEW_URL);
+        self::assertNotSame($settings->client(), $settings->client()->forReview(true));
+
+        $_SERVER['SUPERTEXT_REVIEW_URL'] = 'http://localhost:3000/v1/';
+        self::assertSame('http://localhost:3000/v1/', $settings->reviewUrl());
+
+        // Set but empty: Translation review off for every locale.
+        $_SERVER['SUPERTEXT_REVIEW_URL'] = '';
+        self::assertSame('', $settings->reviewUrl());
+        $client = $settings->client();
+        self::assertSame($client, $client->forReview(true));
     }
 
     public function testTargetOptionsAreLocalized(): void

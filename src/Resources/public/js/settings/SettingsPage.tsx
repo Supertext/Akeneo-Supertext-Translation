@@ -92,7 +92,7 @@ const SettingsPage = () => {
     api_url: apiUrl,
     timeout: Number(timeout),
     version_reports: versionReports,
-    languages: Object.fromEntries(languages.map(language => [language.locale, {code: language.code, politeness: language.politeness}])),
+    languages: Object.fromEntries(languages.map(language => [language.locale, {code: language.code, politeness: language.politeness, review: language.review}])),
   });
 
   const save = () => {
@@ -236,6 +236,7 @@ const SettingsPage = () => {
                   <Table.HeaderCell>{__('supertext_translation.settings.locale')}</Table.HeaderCell>
                   <Table.HeaderCell>{__('supertext_translation.settings.code')}</Table.HeaderCell>
                   <Table.HeaderCell>{__('supertext_translation.settings.politeness')}</Table.HeaderCell>
+                  <Table.HeaderCell>{__('supertext_translation.settings.review')}</Table.HeaderCell>
                 </Table.Header>
                 <Table.Body>
                   {languages.map(language => (
@@ -297,10 +298,23 @@ const SettingsPage = () => {
                           </Helper>
                         )}
                       </Table.Cell>
+                      <Table.Cell>
+                        <Checkbox
+                          className="supertext-review"
+                          checked={language.review}
+                          readOnly={settings.review_url === ''}
+                          onChange={(value: boolean) => updateLanguage(language.locale, {review: value})}
+                          title={__('supertext_translation.settings.review_label', {language: language.label})}
+                        />
+                      </Table.Cell>
                     </Table.Row>
                   ))}
                 </Table.Body>
               </Table>
+              <Note className="supertext-review-help">
+                {__('supertext_translation.settings.review_help')}
+                {settings.review_url === '' && ` ${__('supertext_translation.settings.review_off')}`}
+              </Note>
               <Note className="supertext-version">
                 {__('supertext_translation.settings.version')}{' '}
                 {settings.release_url !== '' ? (

@@ -115,6 +115,10 @@ supertext_translation:
         choose_code: '— Scegliere —'
         not_mapped: 'Nessun valore predefinito per questa impostazione locale: scelga una lingua Supertext'
         no_politeness: 'Supertext non offre una scelta formale/informale per questa lingua'
+        review: Revisione delle traduzioni
+        review_label: 'Revisione delle traduzioni per {{ language }}'
+        review_help: 'Revisione delle traduzioni: le traduzioni in un’impostazione locale selezionata passano dal servizio di revisione di Supertext, così i revisori possono controllarle e correggerle direttamente sul sito con l’estensione Supertext Localization Review. Le loro correzioni vengono riprese alla prossima traduzione del prodotto.'
+        review_off: 'La variabile d’ambiente SUPERTEXT_REVIEW_URL è vuota su questo server: la revisione delle traduzioni è disattivata per tutte le impostazioni locali.'
         test: Verifica connessione
         saved: Impostazioni salvate.
         version: Supertext Translation per Akeneo PIM, versione

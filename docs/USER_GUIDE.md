@@ -39,6 +39,8 @@ Languages that already have their own text are **kept**: the dialog shows *Has i
 
 Only the values that the source language has text for are written. A value that is empty in the source language is left alone in the other languages.
 
+**Translation review:** if your administrator turned on *Translation review* for a locale, reviewers (your colleagues or Supertext linguists) check and correct the translations on the website. Their corrections come into Akeneo the next time you translate the product into that locale: after a review, translate it again with *Overwrite existing translations*. Texts reviewed once keep their corrected wording in later translations.
+
 ## Translate with a file (XLIFF or HTML)
 
 Instead of translating with Supertext right away, you can export a product's texts as a file, have it translated elsewhere — in a translation tool (Trados, memoQ, Phrase …), by a translator, or by uploading it to Supertext's web app — and import the translated file again. Both entries are in the same **…** menu as *Translate with Supertext*, on products and product models.

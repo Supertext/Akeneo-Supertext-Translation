@@ -12,6 +12,7 @@ namespace Supertext\AkeneoTranslationBundle\Settings;
 
 use Supertext\AkeneoTranslationBundle\Api\SupertextClient;
 use Supertext\AkeneoTranslationBundle\Api\SupertextException;
+use Supertext\AkeneoTranslationBundle\Reporting\Reporting;
 use Supertext\PluginHealth\InstallationReporter;
 use Supertext\Sdk\V1\Languages;
 use Supertext\Sdk\V1\SupertextException as SdkException;
@@ -19,7 +20,8 @@ use Supertext\Sdk\V1\SupertextException as SdkException;
 /**
  * The bundle's settings: what an administrator saved under System → Supertext, with the
  * environment variables SUPERTEXT_API_KEY, SUPERTEXT_API_URL and SUPERTEXT_VERSION_REPORTS
- * taking precedence.
+ * taking precedence. SUPERTEXT_REVIEW_URL sets the review service for locales with "Translation review"
+ * on (languages.<locale>.review; default SupertextClient::REVIEW_URL, set but empty = review off).
  *
  * Languages follow the Supertext SDK's rules: the locale's mapping (languages.<locale>.code, a drop-down
  * per locale on the settings page) wins, else a locale that equals a Supertext code apart from case and
@@ -107,6 +109,23 @@ final class Settings
     public function baseUrlFromEnvironment(): bool
     {
         return self::environmentValue('SUPERTEXT_API_URL') !== '';
+    }
+
+    /**
+     * The review service for locales with "Translation review" on: SUPERTEXT_REVIEW_URL when it is set
+     * (also when empty: review off for every locale), else Supertext's review service.
+     */
+    public function reviewUrl(): string
+    {
+        $value = $_SERVER['SUPERTEXT_REVIEW_URL'] ?? $_ENV['SUPERTEXT_REVIEW_URL'] ?? getenv('SUPERTEXT_REVIEW_URL');
+
+        return \is_string($value) ? trim($value) : SupertextClient::REVIEW_URL;
+    }
+
+    /** Whether translations into $locale go through the review service ("Translation review", off by default). */
+    public function review(string $locale): bool
+    {
+        return ($this->languages()[$locale]['review'] ?? false) === true;
     }
 
     public function timeout(): int
@@ -245,7 +264,7 @@ final class Settings
         return \in_array($value, ['more', 'less'], true) ? $value : '';
     }
 
-    /** @return array<string, array{code?: string, politeness?: string}> */
+    /** @return array<string, array{code?: string, politeness?: string, review?: bool}> */
     public function languages(): array
     {
         $languages = $this->stored()['languages'] ?? [];
@@ -302,7 +321,15 @@ final class Settings
 
     public function client(): SupertextClient
     {
-        return new SupertextClient($this->apiKey(), $this->baseUrl(), $this->timeout(), 'Akeneo-Supertext/' . (self::version() !== '' ? self::version() : 'dev'));
+        // The User-Agent names the bundle and its version (as in the reports), so Supertext and the review
+        // service see which release calls. forReview() gives the client for locales with Translation review.
+        return new SupertextClient(
+            $this->apiKey(),
+            $this->baseUrl(),
+            $this->timeout(),
+            Reporting::PLUGIN_NAME . '/' . (self::version() !== '' ? self::version() : 'dev'),
+            reviewUrl: $this->reviewUrl(),
+        );
     }
 
     /**
@@ -393,6 +420,11 @@ final class Settings
                 $target = $code !== '' ? ($known ?? $code) : self::suggestedLanguageCode($locale);
                 if (\in_array($politeness, ['more', 'less'], true) && ($target === null || Languages::supportsPoliteness($target) !== false)) {
                     $entry['politeness'] = $politeness;
+                }
+
+                // Translation review: on or off per target locale (off when not sent).
+                if (($language['review'] ?? false) === true) {
+                    $entry['review'] = true;
                 }
 
                 if ($entry !== []) {

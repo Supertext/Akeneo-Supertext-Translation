@@ -123,6 +123,7 @@ final class SettingsController
                 'code'           => (string) ($stored['code'] ?? $suggested ?? ''),
                 'suggested_code' => (string) $suggested,
                 'politeness'     => $this->settings->politeness($locale),
+                'review'         => $this->settings->review($locale),
             ];
         }
 
@@ -138,6 +139,8 @@ final class SettingsController
             'api_url'                  => $this->settings->customUrl(),
             'api_url_from_environment' => $this->settings->baseUrlFromEnvironment(),
             'effective_url'            => $this->settings->baseUrl(),
+            // '' when SUPERTEXT_REVIEW_URL turns Translation review off for every locale.
+            'review_url'               => $this->settings->reviewUrl(),
             'timeout'                  => $this->settings->timeout(),
             'languages'                => $languages,
             // Supertext's target languages (code, localized name, politeness) for the mapping's drop-downs.

@@ -174,7 +174,8 @@ final class EntityTranslator
             }
 
             try {
-                $translations = $this->translateUnits($client, $plan['translate'], $source, $target);
+                // Locales with "Translation review" on go through the review service (same key and protocol).
+                $translations = $this->translateUnits($client->forReview($this->settings->review($target)), $plan['translate'], $source, $target);
             } catch (SupertextException $e) {
                 $results[$target] = ['status' => 'error', 'translated' => 0, 'existing' => $plan['existing'], 'key' => $e->key, 'params' => $e->params, 'detail' => $e->detail, 'message' => $e->getMessage()];
 
