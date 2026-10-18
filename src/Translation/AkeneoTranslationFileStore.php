@@ -48,7 +48,7 @@ final class AkeneoTranslationFileStore implements TranslationFileStore
             return (string) $entity->getCode();
         }
 
-        $identifier = method_exists($entity, 'getIdentifier') ? (string) $entity->getIdentifier() : '';
+        $identifier = (string) $entity->getIdentifier();
 
         return $identifier !== '' ? $identifier : $id;
     }
